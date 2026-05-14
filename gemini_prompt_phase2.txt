@@ -1,0 +1,268 @@
+PHASE 2 : Conversion des maquettes HTML → Écrans Flutter (Lot complet - 8 écrans)
+
+CONTEXTE :
+- Fondation Flutter existante (Phase 1, 0 erreur).
+- Widgets existants : KalanCard, KalanButton, EmptyState, LoadingShimmer.
+- Thème existant : AppTheme (Material 3, high contrast, 3 text scales, mode nuit).
+- Assets copiés dans assets/ (logos, avatars, badges) et déclarés dans pubspec.yaml.
+- BLoC existants : DeckBloc, SyncBloc. Repositories : SQLite offline-first.
+- PAS de Supabase pour l'instant. PAS d'écrans inscription/connexion.
+- Navigation : MaterialPageRoute. Données : mock (List.generate).
+
+FICHIERS HTML SOURCE (C:\Users\angen\Documents\kalan\KALAN_Interfaces\) :
+
+1. kalan_accueil_aminata_complete.html → REMPLACE lib/presentation/screens/home_screen.dart
+2. kalan_creer_deck (1).html → CRÉE lib/presentation/screens/create_deck_screen.dart
+3. kalan_flashcard_fonctions_affines_complete.html → CRÉE lib/presentation/screens/flashcard_study_screen.dart
+4. kalan_mes_fiches_categories_complete.html → CRÉE lib/presentation/screens/deck_categories_screen.dart
+5. kalan_quiz_physique_chimie_complete.html → CRÉE lib/presentation/screens/quiz_screen.dart
+6. kalan_resultat_quiz_complete.html → CRÉE lib/presentation/screens/quiz_result_screen.dart
+7. kalan_mes_badges.html → CRÉE lib/presentation/screens/badges_screen.dart
+8. kalan-page-profile.html → CRÉE lib/presentation/screens/profile_screen.dart
+
+RÈGLES STRICTES :
+- Analyse CHAQUE fichier HTML source pour en extraire la structure exacte.
+- Garde tous les textes en français tels quels.
+- Remplace &lt;img&gt; par Image.asset() avec les bons chemins assets/.
+- Utilise AppColors et ScreenUtil (sp, w, h, r). Pas de couleurs en dur.
+- Les boutons ont onPressed (même vide // TODO).
+- Les listes utilisent ListView.builder ou GridView avec mock data.
+- Ne supprime PAS les fichiers existants sauf home_screen.dart.
+- Ne modifie PAS main.dart, les BLoC, repositories, thème. Ajoute juste les imports.
+- Chaque écran doit être une classe StatelessWidget ou StatefulWidget cohérente.
+- Swipe/animations : utiliser Dismissible, AnimatedSwitcher, ou PageView selon le besoin.
+
+DÉTAILS PAR ÉCRAN :
+
+### 1. HomeScreen (remplace home_screen.dart)
+Source : kalan_accueil_aminata_complete.html
+- Tableau de bord principal.
+- En-tête : avatar (Image.asset random avatar1-11), pseudo "Aminata", niveau, points, streak flamme.
+- Section "Continuer ma révision" : 2-3 KalanCard avec decks récents (mock).
+- Boutons principaux : "Réviser" (→ FlashcardStudyScreen), "Scanner un cours" (→ // TODO OCR).
+- FAB "+" en bas : → CreateDeckScreen.
+- Navigation bas : icônes Accueil / Decks / Profil (décoratif pour l'instant).
+
+### 2. CreateDeckScreen
+Source : kalan_creer_deck (1).html
+- Formulaire : Titre (TextField), Matière (DropdownButton : Maths, Physique, Chimie, Histoire, Géographie, SVT, Français), Niveau (Dropdown : 6ème, 5ème, 4ème, 3ème, 2nde, 1ère, Terminale).
+- Bouton "Créer" : appelle context.read&lt;DeckBloc&gt;().add(CreateDeck(...)) puis Navigator.pop.
+- Bouton "Annuler" : Navigator.pop.
+- Design : fond blanc cassé, champs avec bordures arrondies, contrastes élevés.
+
+### 3. FlashcardStudyScreen
+Source : kalan_flashcard_fonctions_affines_complete.html
+- Carte centrale affichant la question (texte grand, centré).
+- Bouton "Retourner la carte" : AnimatedSwitcher pour flip question ↔ réponse.
+- En bas : 3 boutons "Facile" (vert AppColors.primary), "Moyen" (jaune AppColors.secondary), "Difficile" (rouge AppColors.error).
+- Swipe horizontal (Dismissible ou GestureDetector) pour passer à la carte suivante.
+- AppBar : titre "Fonctions affines", compteur "3/15".
+- Mock : 5 flashcards sur fonctions affines.
+
+### 4. DeckCategoriesScreen
+Source : kalan_mes_fiches_categories_complete.html
+- Grille (GridView.count, 2 colonnes) des matières.
+- Chaque cellule : icône Material (Icons.calculate, Icons.science, etc.), nom matière, nombre de decks.
+- Mock : 6 catégories.
+- Tap → navigue vers DeckListScreen (existant) avec argument matière.
+- En haut : TextField recherche (décoratif, onChanged vide).
+
+### 5. QuizScreen
+Source : kalan_quiz_physique_chimie_complete.html
+- Question en haut (texte large).
+- 4 boutons réponses (KalanButton ou Container tapable).
+- Chronomètre décoratif en haut (CircularProgressIndicator ou texte).
+- Mock : 5 questions QCM.
+- Sélection réponse → feedback couleur (vert/rouge) → bouton "Suivant".
+- AppBar avec "Quiz Physique-Chimie" et score "2/5".
+
+### 6. QuizResultScreen
+Source : kalan_resultat_quiz_complete.html
+- Score final grand au centre (ex: "15/20").
+- Cercle de progression (CircularProgressIndicator ou CustomPaint).
+- Message : "Excellent !" ou "Continue comme ça".
+- Liste des questions avec icône check D'accord, si le Lot 1 (4 écrans core) est déjà lancé ou terminé, voici le **Prompt final pour toutes les pages restantes** en **une seule session Gemini CLI**.
+
+---
+
+```markdown
+PHASE 2 SUITE : Conversion des maquettes HTML restantes → Écrans Flutter (Toutes les pages restantes)
+
+CONTEXTE :
+- La fondation Flutter existe (Phase 1 : 0 erreur).
+- Les widgets réutilisables existent : KalanCard, KalanButton, EmptyState, LoadingShimmer.
+- Le thème existe : AppTheme (Material 3, high contrast, mode nuit, 3 tailles texte).
+- Les assets sont copiés dans assets/ et déclarés dans pubspec.yaml :
+  - Logos : assets/images/kalan_logo.png, logo.png
+  - Avatars : assets/avatars/avatar1.png à avatar11.png + fichiers lucid-origin
+  - Badges : assets/badges/humanites/, langue/, litterature/, sciences/
+- Les BLoC existent : DeckBloc, SyncBloc.
+- Les repositories existent : DeckRepositoryImpl (SQLite local).
+- PAS de Supabase pour l'instant (Phase 3). Toutes les données sont mock/fictives.
+- PAS d'écrans inscription/connexion.
+
+FICHIERS SOURCE HTML :
+C:\Users\angen\Documents\kalan\KALAN_Interfaces\
+
+INSTRUCTIONS GÉNÉRALES :
+- Analyse chaque fichier HTML source pour en extraire la structure visuelle exacte.
+- Crée chaque écran Flutter avec le nom de classe indiqué ci-dessous.
+- Utilise les widgets existants quand c'est pertinent.
+- Remplace les <img> par Image.asset() avec les chemins assets/ corrects.
+- Garde tous les textes en français exactement comme dans le HTML.
+- Utilise AppColors et ScreenUtil (sp, w, h, r). Pas de couleurs en dur.
+- Les boutons ont un onPressed (même vide avec // TODO).
+- Les listes utilisent ListView.builder ou GridView avec mock data.
+- Respecte le contraste élevé pour plein soleil.
+- Ne supprime PAS les fichiers existants. Ajoute uniquement les nouveaux écrans.
+- Ne modifie PAS main.dart, les BLoC, les repositories, ni le thème.
+- Chaque écran doit compiler individuellement.
+
+---
+
+### ÉCRAN 5 : ProfileScreen (crée lib/presentation/screens/profile_screen.dart)
+Source : kalan-page-profile.html
+- Page profil de l'élève.
+- En haut : avatar circulaire (Image.asset avec un avatar aléatoire), pseudo, niveau, points totaux.
+- Section "Statistiques" : streak de jours, decks créés, flashcards maîtrisées, quiz complétés.
+- Section "Matières préférées" : chips ou petites cartes avec icônes.
+- Bouton "Modifier profil" (décoratif).
+- Bouton "Mes badges" → navigue vers BadgesScreen.
+- Mock data : pseudo "Aminata", niveau 5, 1250 points, streak 7 jours.
+
+### ÉCRAN 6 : LeaderboardScreen (crée lib/presentation/screens/leaderboard_screen.dart)
+Source : kalan_classement.html
+- Classement des élèves.
+- 3 onglets ou filtres en haut : National / École / Classe.
+- Liste avec position (1er, 2ème...), avatar, pseudo, niveau, points.
+- Le top 3 a une couronne ou une couleur différente (or, argent, bronze).
+- L'utilisateur actuel est surligné dans la liste.
+- Mock data : 10 élèves avec avatars aléatoires (avatar1 à avatar11).
+
+### ÉCRAN 7 : BadgesScreen (crée lib/presentation/screens/badges_screen.dart)
+Source : kalan_mes_badges.html
+- Grille de badges (GridView).
+- Badges débloqués : couleurs vives, opacité 1.0.
+- Badges verrouillés : gris, opacité 0.4, cadenas.
+- Catégories : Sciences, Humanités, Langues, Littérature.
+- Utilise les vraies images de badges dans assets/badges/.../
+- Mock data : 4 badges débloqués, 20 verrouillés.
+- Tap sur un badge débloqué → dialog avec description.
+
+### ÉCRAN 8 : SettingsScreen (crée lib/presentation/screens/settings_screen.dart)
+Source : kalan_parametres.html
+- Liste de paramètres (ListView avec ListTile).
+- Options :
+  - Taille du texte : Normal / Grand / Très Grand (radio ou slider)
+  - Mode nuit : switch
+  - Notifications : switch
+  - Langue : Français / Mooré / Dioula / Fulfuldé (dropdown)
+  - Mode économie données : switch
+  - Vibreur : switch
+  - À propos / Version
+  - Déconnexion (bouton rouge en bas)
+- Utilise SwitchListTile et ListTile avec trailing.
+- Les switches sont décoratifs (state local uniquement).
+
+### ÉCRAN 9 : ShareScreen (crée lib/presentation/screens/share_screen.dart)
+Source : kalan_partage_local_complete.html
+- Partage de decks sans internet (BLE placeholder).
+- Liste des decks de l'utilisateur avec checkbox.
+- Section "Appareils proches" : mock de 2-3 appareils fictifs avec icône Bluetooth.
+- Bouton "Envoyer" et "Recevoir".
+- Instructions en français : "Active le Bluetooth pour partager tes decks avec tes camarades."
+- Design simple, icône Bluetooth en haut.
+
+### ÉCRAN 10 : QuizScreen (crée lib/presentation/screens/quiz_screen.dart)
+Source : kalan_quiz_physique_chimie_complete.html
+- Quiz à choix multiples ou réponse libre.
+- En haut : barre de progression (10 questions), timer.
+- Question au centre en grand.
+- 4 boutons de réponses (KalanButton ou Card tapable).
+- Feedback immédiat : vert si bon, rouge si faux + vibration (HapticFeedback).
+- Bouton "Question suivante".
+- Mock data : 10 questions de physique/chimie niveau 4ème.
+- AppBar avec bouton abandon.
+
+### ÉCRAN 11 : QuizResultScreen (crée lib/presentation/screens/quiz_result_screen.dart)
+Source : kalan_resultat_quiz_complete.html
+- Écran de résultat après quiz.
+- Score en grand au centre (ex: 8/10).
+- Cercle de progression ou étoiles (1 à 3).
+- Temps total.
+- Points gagnés.
+- Message motivant selon le score.
+- Bouton "Revoir les erreurs" → liste des questions ratées.
+- Bouton "Retour à l'accueil" → HomeScreen.
+- Bouton "Rejouer" → QuizScreen.
+
+### ÉCRAN 12 : GeneratingScreen (crée lib/presentation/screens/generating_screen.dart)
+Source : KALAN-attente-generation-card.html
+- Écran de chargement pendant la génération IA des flashcards.
+- Animation : shimmer ou CircularProgressIndicator.
+- Texte : "KALAN réfléchit..." ou "Génération des flashcards en cours..."
+- Petites bulles d'astuces qui défilent (astuces pédagogiques).
+- Bouton "Annuler" (retour à l'écran précédent).
+- Design rassurant, pas stressant.
+
+---
+
+NAVIGATION À AJOUTER / METTRE À JOUR :
+- Dans HomeScreen (existant) : 
+  - Bouton "Profil" (icône avatar en AppBar ou dans un drawer/bottom nav) → ProfileScreen
+  - Bouton "Classement" → LeaderboardScreen
+  - Bouton "Paramètres" (dans drawer ou AppBar) → SettingsScreen
+- Dans ProfileScreen : bouton "Mes badges" → BadgesScreen
+- Dans DeckListScreen (existant) : 
+  - Long-press ou bouton partage sur un deck → ShareScreen
+  - Tap sur un deck → FlashcardStudyScreen (existant Lot 1)
+- Dans FlashcardStudyScreen : bouton "Quiz" → QuizScreen
+- Dans QuizScreen : fin du quiz → QuizResultScreen
+- Dans QuizResultScreen : "Retour à l'accueil" → HomeScreen, "Rejouer" → QuizScreen
+- Dans CameraOCRScreen (existant Lot 1) : après prise de photo et OCR → GeneratingScreen pendant 2 secondes → FlashcardStudyScreen
+
+RÈGLES DE NAVIGATION :
+- Utilise MaterialPageRoute pour tout.
+- Ajoute les routes si nécessaire mais ne casse pas la navigation existante du Lot 1.
+- Chaque écran doit avoir un AppBar avec titre et bouton retour (sauf HomeScreen).
+
+VÉRIFICATION FINALE :
+- Exécute `flutter analyze` et corrige toutes les erreurs.
+- Exécute `flutter run`.
+- Vérifie que la navigation entre TOUS les écrans fonctionne (Home → Profile → Badges → retour, Home → Deck → Flashcard → Quiz → Result → Home, etc.).
+- Confirme que les images assets/ s'affichent correctement (avatars, badges, logo).
+
+Génère les 8 écrans en une seule session continue. Ne demande pas confirmation entre chaque fichier.
+```
+
+---
+
+## 📋 Récapitulatif des 12 écrans totaux
+
+| # | Écran | Fichier généré | Lot |
+|---|-------|----------------|-----|
+| 1 | Home | `home_screen.dart` | ✅ Lot 1 (déjà fait) |
+| 2 | Create Deck | `create_deck_screen.dart` | ✅ Lot 1 |
+| 3 | Flashcard Study | `flashcard_study_screen.dart` | ✅ Lot 1 |
+| 4 | Deck Categories | `deck_categories_screen.dart` | ✅ Lot 1 |
+| 5 | **Profile** | `profile_screen.dart` | 🆕 Prompt ci-dessus |
+| 6 | **Leaderboard** | `leaderboard_screen.dart` | 🆕 |
+| 7 | **Badges** | `badges_screen.dart` | 🆕 |
+| 8 | **Settings** | `settings_screen.dart` | 🆕 |
+| 9 | **Share** | `share_screen.dart` | 🆕 |
+| 10 | **Quiz** | `quiz_screen.dart` | 🆕 |
+| 11 | **Quiz Result** | `quiz_result_screen.dart` | 🆕 |
+| 12 | **Generating** | `generating_screen.dart` | 🆕 |
+
+---
+
+## ⚠️ Avant qu'il lance ce prompt
+
+Vérifie que :
+1. **Les assets sont bien copiés** dans `assets/` et `pubspec.yaml` est à jour
+2. **Le Lot 1 compile encore** (`flutter analyze` = 0 erreur)
+3. **Il a le dossier** `KALAN_Interfaces` accessible depuis son terminal (même chemin)
+
+Si Gemini CLI plante à cause de la longueur, coupe le prompt en deux :
+- **Premier lancement** : Écrans 5 à 9 (Profile, Leaderboard, Badges, Settings, Share)
+- **Deuxième lancement** : Écrans 10 à 12 (Quiz, QuizResult, Generating)

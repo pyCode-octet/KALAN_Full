@@ -1,0 +1,23 @@
+import 'package:equatable/equatable.dart';
+
+abstract class UserEvent extends Equatable {
+  const UserEvent();
+  @override
+  List<Object?> get props => [];
+}
+
+class LoadUserProfile extends UserEvent {}
+class UpdateUserProfile extends UserEvent {
+  final String? pseudo;
+  final String? avatar;
+  final int? avatarId;
+  final String? school;
+  final String? className;
+  final String? firstName;
+  final String? lastName;
+
+  const UpdateUserProfile({this.pseudo, this.avatar, this.avatarId, this.school, this.className, this.firstName, this.lastName});
+
+  @override
+  List<Object?> get props => [pseudo, avatar, avatarId, school, className, firstName, lastName];
+}

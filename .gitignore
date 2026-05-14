@@ -1,0 +1,60 @@
+# ═══════════════════════════════════════════════════
+# CLÉS ET CONFIGS LOCALES
+# ═══════════════════════════════════════════════════
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.p12
+*.jks
+kalan_app/android/key.properties
+kalan_app/ios/Runner/GoogleService-Info.plist
+kalan_app/ios/Runner/Info.plist
+kalan_app/android/app/google-services.json
+kalan_app/lib/firebase_options.dart
+
+# ═══════════════════════════════════════════════════
+# MODÈLES IA LOCAUX (TRÈS LOURDS)
+# ═══════════════════════════════════════════════════
+*.gguf
+*.bin
+*.safetensors
+*.onnx
+*.tflite
+kalan_app/assets/models/
+kalan_app/android/app/src/main/assets/models/
+
+# ═══════════════════════════════════════════════════
+# BACKEND SENSIBLE
+# ═══════════════════════════════════════════════════
+kalan_backend/.env
+kalan_backend/supabase/config.toml
+kalan_backend/service_account.json
+kalan-backend/.env
+kalan-backend/supabase/config.toml
+kalan-backend/service_account.json
+
+# ═══════════════════════════════════════════════════
+# BUILD ET CACHE
+# ═══════════════════════════════════════════════════
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/.pub-cache/
+**/.pub/
+**/generated_plugin_registrant.dart
+**/generated/
+**/*.g.dart
+**/*.freezed.dart
+**/.idea/
+**/.vscode/
+**/*.iml
+
+# ═══════════════════════════════════════════════════
+# OS
+# ═══════════════════════════════════════════════════
+.DS_Store
+Thumbs.db

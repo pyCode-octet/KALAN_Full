@@ -1,0 +1,395 @@
+import 'package:flutter/material.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:uuid/uuid.dart';
+import 'package:kalan_app/data/local/database_helper.dart';
+import 'package:kalan_app/data/models/user_model.dart';
+import 'package:kalan_app/data/remote/supabase_service.dart';
+import '../../core/constants/app_colors.dart';
+import '../widgets/kalan_button.dart';
+import 'home_screen.dart';
+
+class OnboardingPseudoScreen extends StatefulWidget {
+  final Map<String, dynamic> registrationData;
+
+  const OnboardingPseudoScreen({
+    super.key,
+    required this.registrationData,
+  });
+
+  @override
+  State<OnboardingPseudoScreen> createState() => _OnboardingPseudoScreenState();
+}
+
+class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
+  final TextEditingController _pseudoController = TextEditingController();
+  int _selectedAvatar = 1;
+  bool _isLoading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: Stack(
+        children: [
+          _buildBackgroundPattern(),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
+                  _buildLogo(),
+                  const SizedBox(height: 35),
+                  _buildProgressIndicator(),
+                  const SizedBox(height: 35),
+                  Text(
+                    'Choisis ton pseudo',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 27,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'C\'est avec ce pseudo que tu seras reconnu(e) par les autres élèves.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF8A7A58),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  _buildInputBox('Ton pseudo'),
+                  const SizedBox(height: 30),
+                  Text(
+                    'Choisis ton avatar',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 27,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'C\'est l\'image qui te représentera dans KALAN.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF8A7A58),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  _buildAvatarGrid(),
+                  const SizedBox(height: 20),
+                  if (_isLoading)
+                    const CircularProgressIndicator()
+                  else
+                    KalanButton(
+                      text: 'Commencer mon aventure',
+                      onPressed: _handleStartAventure,
+                    ),
+                  const SizedBox(height: 25),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            top: 40,
+            left: 10,
+            child: IconButton(
+              icon: Icon(Icons.arrow_back, color: AppColors.primary, size: 28),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBackgroundPattern() {
+    return Positioned.fill(
+      child: Opacity(
+        opacity: 0.05,
+        child: Image.asset(
+          'assets/images/kalan_logo.png',
+          repeat: ImageRepeat.repeat,
+          scale: 10,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogo() {
+    return Column(
+      children: [
+        Image.asset(
+          'assets/images/kalan_logo.png',
+          width: 94,
+          height: 94,
+          fit: BoxFit.contain,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'KALAN',
+          style: TextStyle(
+            fontSize: 40,
+            color: AppColors.primary,
+            letterSpacing: 5,
+            fontStyle: FontStyle.italic,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        Text(
+          'Le savoir qui grandit avec toi',
+          style: TextStyle(
+            fontSize: 12,
+            color: AppColors.primary,
+            fontWeight: FontWeight.w700,
+            fontStyle: FontStyle.italic,
+            letterSpacing: 1,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProgressIndicator() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildStep(1, 'Infos', true, done: true),
+        _buildLine(),
+        _buildStep(2, 'Pseudo', true),
+        _buildLine(),
+        _buildStep(3, 'Avatar', false),
+      ],
+    );
+  }
+
+  Widget _buildStep(int step, String label, bool active, {bool done = false}) {
+    return Column(
+      children: [
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: active ? AppColors.primary : const Color(0xFFEDE7DB),
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
+          child: done
+              ? const Icon(Icons.check, color: Colors.white, size: 20)
+              : Text(
+                  step.toString(),
+                  style: TextStyle(
+                    color: active ? Colors.white : const Color(0xFF1A1A1A),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF6A5A38),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLine() {
+    return Container(
+      width: 40,
+      height: 2,
+      margin: const EdgeInsets.only(bottom: 22, left: 4, right: 4),
+      color: const Color(0xFFD8CFBF),
+    );
+  }
+
+  Widget _buildInputBox(String hint) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFD8CFBA), width: 2),
+      ),
+      child: TextField(
+        controller: _pseudoController,
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: Color(0xFFC0B080), fontWeight: FontWeight.w600),
+          border: InputBorder.none,
+        ),
+        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF3A2810)),
+      ),
+    );
+  }
+
+  Widget _buildAvatarGrid() {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: 12,
+      itemBuilder: (context, index) {
+        final avatarNum = index + 1;
+        final isSelected = _selectedAvatar == avatarNum;
+        return GestureDetector(
+          onTap: () => setState(() => _selectedAvatar = avatarNum),
+          child: Stack(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSelected ? AppColors.primary : const Color(0xFFD8CFBA),
+                    width: isSelected ? 3 : 2.5,
+                  ),
+                  boxShadow: isSelected
+                      ? [BoxShadow(color: AppColors.primary.withOpacity(0.22), blurRadius: 6, spreadRadius: 2)]
+                      : [],
+                ),
+                child: ClipOval(
+                  child: Image.asset(
+                    'assets/avatars/avatar$avatarNum.png',
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey),
+                  ),
+                ),
+              ),
+              if (isSelected)
+                Positioned(
+                  bottom: 1,
+                  right: 1,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFF5EDD8), width: 2),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.check, color: Colors.white, size: 12),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _handleStartAventure() async {
+    final pseudo = _pseudoController.text.trim();
+    if (pseudo.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Entre ton pseudo')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      // 1. Gérer l'école (school_id)
+      final schoolName = widget.registrationData['school_name'] as String;
+      int? schoolId;
+      
+      try {
+        final existingSchool = await SupabaseService.client
+            .from('schools')
+            .select('id')
+            .eq('name', schoolName)
+            .maybeSingle();
+        
+        if (existingSchool != null) {
+          schoolId = existingSchool['id'] as int;
+        } else {
+          final newSchool = await SupabaseService.client
+              .from('schools')
+              .insert({'name': schoolName})
+              .select('id')
+              .single();
+          schoolId = newSchool['id'] as int;
+        }
+      } catch (e) {
+        debugPrint('Erreur gestion ecole: $e');
+        // Mode hors-ligne : on continue sans school_id
+      }
+
+      // 2. Générer UUID local
+      final uuid = const Uuid().v4();
+
+      // 3. Récupérer le nom de la classe
+      final classId = widget.registrationData['class_id'] as int;
+      String? className;
+      try {
+        final classData = await SupabaseService.client
+            .from('classes')
+            .select('name')
+            .eq('id', classId)
+            .single();
+        className = classData['name'] as String;
+      } catch (e) {
+        className = 'Inconnue';
+      }
+
+      final userModel = UserModel(
+        uuid: uuid,
+        pseudo: pseudo,
+        firstName: widget.registrationData['first_name'],
+        lastName: widget.registrationData['last_name'],
+        schoolId: schoolId,
+        classId: classId,
+        className: className,
+        avatarId: _selectedAvatar,
+        isGuest: false,
+        createdAt: DateTime.now(),
+      );
+
+      // 4. Sauvegarde locale SQLite
+      final dbHelper = DatabaseHelper.instance;
+      final db = await dbHelper.database;
+      await db.insert('users', userModel.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+
+      // 5. Sauvegarde Supabase (Profil utilisateur)
+      try {
+        await SupabaseService.client.from('users').upsert(userModel.toSupabaseJson());
+      } catch (e) {
+        debugPrint('Erreur upsert Supabase: $e');
+        // Mode hors-ligne : les donnees seront synchronisees plus tard
+      }
+
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+}
