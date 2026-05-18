@@ -11,6 +11,7 @@ import '../blocs/user/user_event.dart';
 import '../blocs/user/user_state.dart';
 import 'badges_screen.dart';
 import 'login_screen.dart';
+import 'about_screen.dart';
 import '../../data/local/database_helper.dart';
 import '../../data/remote/supabase_service.dart';
 
@@ -539,48 +540,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 prefKey: 'about',
                 defaultValue: true,
                 isAction: true,
-                onTap: () => _showAboutDialog(context),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AboutScreen()),
+                  );
+                },
               ),
             ],
           ),
         ),
       ],
-    );
-  }
-
-  void _showAboutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            _buildLogoSvg(),
-            const SizedBox(width: 10),
-            const Flexible(child: Text('À propos de KALAN', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16))),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'KALAN est ton compagnon d\'apprentissage intelligent conçu pour t\'aider à maîtriser tes cours grâce aux flashcards et à l\'IA.',
-              style: TextStyle(fontSize: 14, color: Color(0xFF4B5563)),
-            ),
-            const SizedBox(height: 16),
-            const Text('Version: 1.0.0', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF9CA3AF))),
-            const SizedBox(height: 8),
-            const Text('Développé avec ❤️ pour l\'éducation.', style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF))),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Fermer', style: TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
     );
   }
 

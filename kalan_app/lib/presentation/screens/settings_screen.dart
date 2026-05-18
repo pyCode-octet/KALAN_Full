@@ -6,6 +6,7 @@ import 'package:kalan_app/presentation/blocs/sync/sync_event.dart';
 import 'package:kalan_app/presentation/blocs/user/user_bloc.dart';
 import 'package:kalan_app/presentation/blocs/user/user_event.dart';
 import 'package:kalan_app/presentation/screens/login_screen.dart';
+import 'package:kalan_app/presentation/screens/about_screen.dart';
 import 'package:kalan_app/data/local/database_helper.dart';
 import '../../core/constants/app_colors.dart';
 
@@ -57,7 +58,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Synchronisation en cours...')));
             }, iconColor: AppColors.primary),
             _buildDivider(),
-            _buildSettingTile(Icons.info_outline_rounded, 'À propos de Kalan', 'Version 1.0.0', () {}),
+            _buildSettingTile(Icons.info_outline_rounded, 'À propos de Kalan', 'Version 1.0.0', () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AboutScreen()),
+              );
+            }),
           ]),
           SizedBox(height: 40),
           ElevatedButton(
