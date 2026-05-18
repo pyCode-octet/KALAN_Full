@@ -26,6 +26,25 @@ kalan_app/assets/models/
 kalan_app/android/app/src/main/assets/models/
 
 # ═══════════════════════════════════════════════════
+# SQL ET DUMP DE BASE DE DONNÉES
+# ═══════════════════════════════════════════════════
+*.sql
+supabase/
+
+# ═══════════════════════════════════════════════════
+# FICHIERS TEMPORAIRES ET D’ANALYSE
+# ═══════════════════════════════════════════════════
+analyze*.txt
+flutter_analyze_output.txt
+kalan_app/analyze_*.txt
+kalan_app/commandlinetools.zip
+
+# ═══════════════════════════════════════════════════
+# DOSSIERS À NE PAS PUSHER
+# ═══════════════════════════════════════════════════
+kalan_flutter/
+
+# ═══════════════════════════════════════════════════
 # BACKEND SENSIBLE
 # ═══════════════════════════════════════════════════
 kalan_backend/.env
