@@ -19,6 +19,7 @@ kalan_app/lib/firebase_options.dart
 # ═══════════════════════════════════════════════════
 *.gguf
 *.bin
+*.task
 *.safetensors
 *.onnx
 *.tflite

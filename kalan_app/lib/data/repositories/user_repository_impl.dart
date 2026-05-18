@@ -28,7 +28,11 @@ class UserRepositoryImpl implements UserRepository {
     }
     
     if (maps.isNotEmpty) {
-      return Map<String, dynamic>.from(maps.first);
+      final userMap = Map<String, dynamic>.from(maps.first);
+      
+      // Update streak if needed
+      final updatedUserMap = await _checkAndUpdateStreak(userMap);
+      return updatedUserMap;
     }
     
     // Default if nothing in local
@@ -41,11 +45,78 @@ class UserRepositoryImpl implements UserRepository {
     };
   }
 
+  Future<Map<String, dynamic>> _checkAndUpdateStreak(Map<String, dynamic> userMap) async {
+    final db = await _dbHelper.database;
+    final String? lastActiveStr = userMap['last_active'];
+    final int currentStreak = userMap['streak'] ?? 0;
+    final String uuid = userMap['uuid'];
+    
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    if (lastActiveStr != null) {
+      final lastActive = DateTime.parse(lastActiveStr);
+      final lastActiveDate = DateTime(lastActive.year, lastActive.month, lastActive.day);
+      
+      final difference = today.difference(lastActiveDate).inDays;
+      
+      if (difference == 0) {
+        // Déjà actif aujourd'hui, pas de changement de série
+        return userMap;
+      } else if (difference == 1) {
+        // Actif hier, on incrémente la série
+        final newStreak = currentStreak + 1;
+        final updates = {
+          'streak': newStreak,
+          'last_active': today.toIso8601String(),
+        };
+        await db.update('users', updates, where: 'uuid = ?', whereArgs: [uuid]);
+        
+        // Sync online if possible
+        if (await _connectivity.isOnline()) {
+           try {
+             await SupabaseService.client.from('users').update(updates).eq('uuid', uuid);
+           } catch (_) {}
+        }
+        
+        return {...userMap, ...updates};
+      } else {
+        // Plus d'un jour d'inactivité, on réinitialise à 1 (pour aujourd'hui)
+        final updates = {
+          'streak': 1,
+          'last_active': today.toIso8601String(),
+        };
+        await db.update('users', updates, where: 'uuid = ?', whereArgs: [uuid]);
+        
+        if (await _connectivity.isOnline()) {
+           try {
+             await SupabaseService.client.from('users').update(updates).eq('uuid', uuid);
+           } catch (_) {}
+        }
+        return {...userMap, ...updates};
+      }
+    } else {
+      // Première activité enregistrée
+      final updates = {
+        'streak': 1,
+        'last_active': today.toIso8601String(),
+      };
+      await db.update('users', updates, where: 'uuid = ?', whereArgs: [uuid]);
+      
+      if (await _connectivity.isOnline()) {
+         try {
+           await SupabaseService.client.from('users').update(updates).eq('uuid', uuid);
+         } catch (_) {}
+      }
+      return {...userMap, ...updates};
+    }
+  }
+
   @override
   Future<void> updateUserProfile({String? pseudo, String? avatar, int? avatarId, String? school, String? className, String? firstName, String? lastName}) async {
     final db = await _dbHelper.database;
-    final user = SupabaseService.currentUser;
-    if (user == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    final String currentUserId = prefs.getString('current_user_uuid') ?? 'guest';
     
     final Map<String, dynamic> updates = {};
     if (pseudo != null) updates['pseudo'] = pseudo;
@@ -58,7 +129,7 @@ class UserRepositoryImpl implements UserRepository {
     updates['updated_at'] = DateTime.now().toIso8601String();
     
     final bool isOnline = await _connectivity.isOnline();
-    if (isOnline) {
+    if (isOnline && SupabaseService.currentUser != null) {
       updates['sync_status'] = 'synced';
     } else {
       updates['sync_status'] = 'pending';
@@ -66,42 +137,42 @@ class UserRepositoryImpl implements UserRepository {
 
     // 1. Local
     if (updates.isNotEmpty) {
-      await db.update('users', updates, where: 'uuid = ?', whereArgs: [user.id]);
+      await db.update('users', updates, where: 'uuid = ?', whereArgs: [currentUserId]);
     }
 
     // 2. Supabase
-    final Map<String, dynamic> supabasePayload = {
-      'uuid': user.id,
-      if (pseudo != null) 'pseudo': pseudo,
-      if (className != null) 'class_name': className,
-      if (avatarId != null) 'avatar_id': avatarId,
-      if (avatar != null) 'avatar_url': avatar,
-      if (firstName != null) 'first_name': firstName,
-      if (lastName != null) 'last_name': lastName,
-      if (school != null) 'school_name': school,
-      'updated_at': DateTime.now().toIso8601String(),
-    };
+    final user = SupabaseService.currentUser;
+    if (user != null) {
+      final Map<String, dynamic> supabasePayload = {
+        'uuid': user.id,
+        if (pseudo != null) 'pseudo': pseudo,
+        if (avatarId != null) 'avatar_id': avatarId,
+        if (avatar != null) 'avatar_url': avatar,
+        if (firstName != null) 'first_name': firstName,
+        if (lastName != null) 'last_name': lastName,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
 
-    if (isOnline) {
-      try {
-        await SupabaseService.client.auth.updateUser(
-          UserAttributes(
-            data: {
-              if (pseudo != null) 'pseudo': pseudo,
-              if (className != null) 'class': className,
-              if (avatarId != null) 'avatar_id': avatarId,
-              if (avatar != null) 'avatar_url': avatar,
-              if (firstName != null) 'firstName': firstName,
-              if (lastName != null) 'lastName': lastName,
-            },
-          ),
-        );
-        await SupabaseService.client.from('users').update(Map.from(supabasePayload)..remove('uuid')).eq('uuid', user.id);
-      } catch (e) {
+      if (isOnline) {
+        try {
+          await SupabaseService.client.auth.updateUser(
+            UserAttributes(
+              data: {
+                if (pseudo != null) 'pseudo': pseudo,
+                if (avatarId != null) 'avatar_id': avatarId,
+                if (avatar != null) 'avatar_url': avatar,
+                if (firstName != null) 'firstName': firstName,
+                if (lastName != null) 'last_name': lastName,
+              },
+            ),
+          );
+          await SupabaseService.client.from('users').update(Map.from(supabasePayload)..remove('uuid')).eq('uuid', user.id);
+        } catch (e) {
+          await _addToSyncQueue('UPDATE_USER', supabasePayload);
+        }
+      } else {
         await _addToSyncQueue('UPDATE_USER', supabasePayload);
       }
-    } else {
-      await _addToSyncQueue('UPDATE_USER', supabasePayload);
     }
   }
 
@@ -119,13 +190,42 @@ class UserRepositoryImpl implements UserRepository {
     if (userId == null) return;
 
     // Calcul du nouveau niveau simplifié (ex: tous les 100 points)
-    // On peut utiliser LevelUtils si disponible, sinon une logique simple
     int newLevel = (newPoints / 100).floor() + 1;
     if (newLevel < 1) newLevel = 1;
+
+    // --- Streak Logic ---
+    int currentStreak = profile['streak'] as int? ?? 0;
+    final String? lastActiveStr = profile['last_active']?.toString();
+    
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    int newStreak = currentStreak;
+    if (lastActiveStr == null || lastActiveStr.isEmpty) {
+      newStreak = 1;
+    } else {
+      try {
+        final lastActive = DateTime.parse(lastActiveStr);
+        final lastActiveDay = DateTime(lastActive.year, lastActive.month, lastActive.day);
+        final difference = today.difference(lastActiveDay).inDays;
+        
+        if (difference == 1) {
+          newStreak = currentStreak + 1;
+        } else if (difference > 1) {
+          newStreak = 1;
+        }
+        // Si difference == 0 (même jour), on ne change pas le streak
+      } catch (_) {
+        newStreak = 1;
+      }
+    }
+    // ---------------------
 
     final Map<String, dynamic> updates = {
       'points': newPoints,
       'level': newLevel,
+      'streak': newStreak,
+      'last_active': now.toIso8601String(),
     };
 
     // 1. Local

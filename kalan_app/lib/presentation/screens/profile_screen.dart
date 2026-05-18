@@ -14,8 +14,20 @@ import 'login_screen.dart';
 import '../../data/local/database_helper.dart';
 import '../../data/remote/supabase_service.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Refresh profile and stats when entering the screen
+    context.read<UserBloc>().add(LoadUserProfile());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -174,9 +186,26 @@ class ProfileScreen extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        Text(
-          profile['pseudo'] ?? 'Élève KALAN',
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF111111)),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              profile['pseudo'] ?? 'Élève KALAN',
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF111111)),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () => _showEditProfileBottomSheet(context, profile),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0F7F0),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.edit, size: 14, color: Color(0xFF2E7D32)),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         Container(
@@ -234,47 +263,40 @@ class ProfileScreen extends StatelessWidget {
       child: GridView.count(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 2.2,
+        crossAxisCount: 3,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 1.1,
         children: [
-          _buildStatCard('Fiches', (stats['deckCount'] ?? 0).toString(), const Color(0xFF7C3AED), Icons.description_outlined),
-          _buildStatCard('Quiz', (stats['quizCount'] ?? 0).toString(), const Color(0xFFEA580C), Icons.help_outline_outlined),
-          _buildStatCard('Réussite', '${((stats['avgScore'] ?? 0) * 100).toInt()}%', const Color(0xFF16A34A), Icons.trending_up),
-          _buildStatCard('Série', '${profile['streak'] ?? 0}j', const Color(0xFFF97316), Icons.local_fire_department),
+          _buildStatCardVertical('Fiches', (stats['deckCount'] ?? 0).toString(), const Color(0xFF7C3AED), Icons.description_outlined),
+          _buildStatCardVertical('Quiz', (stats['quizCount'] ?? 0).toString(), const Color(0xFFEA580C), Icons.help_outline_outlined),
+          _buildStatCardVertical('Série', '${profile['streak'] ?? 0}j', const Color(0xFFF97316), Icons.local_fire_department),
         ],
       ),
     );
   }
 
-  Widget _buildStatCard(String label, String value, Color color, IconData icon) {
+  Widget _buildStatCardVertical(String label, String value, Color color, IconData icon) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFF0EBE0)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.01), blurRadius: 4, offset: const Offset(0, 2))],
       ),
-      child: Row(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 32, height: 32,
-            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(10)),
-            child: Icon(icon, color: Colors.white, size: 16),
+            width: 28, height: 28,
+            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(8)),
+            child: Icon(icon, color: Colors.white, size: 14),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF111111), height: 1.1)),
-                Text(label, style: const TextStyle(fontSize: 9, color: Color(0xFF9CA3AF), fontWeight: FontWeight.w600)),
-              ],
-            ),
-          ),
+          const SizedBox(height: 8),
+          Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFF111111), height: 1.1)),
+          const SizedBox(height: 2),
+          Text(label, style: const TextStyle(fontSize: 9, color: Color(0xFF9CA3AF), fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -360,10 +382,7 @@ class ProfileScreen extends StatelessWidget {
           ),
           child: Column(
             children: [
-              _buildInfoRow(Icons.alternate_email, 'PSEUDO', profile['pseudo'] ?? '-', isFirst: true),
-              _buildInfoRow(Icons.person_outline, 'NOM COMPLET', '${profile['first_name'] ?? ''} ${profile['last_name'] ?? ''}'.trim().isEmpty ? '-' : '${profile['first_name'] ?? ''} ${profile['last_name'] ?? ''}'.trim()),
-              _buildInfoRow(Icons.school_outlined, 'ÉCOLE', profile['school_name'] ?? 'Non définie'),
-              _buildInfoRow(Icons.class_outlined, 'CLASSE', profile['class_name'] ?? 'Non définie', isLast: true),
+              _buildInfoRow(Icons.alternate_email, 'PSEUDO', profile['pseudo'] ?? '-', isFirst: true, isLast: true),
             ],
           ),
         ),
@@ -398,12 +417,6 @@ class ProfileScreen extends StatelessWidget {
 
   void _showEditProfileBottomSheet(BuildContext context, Map<String, dynamic> profile) {
     final pseudoController = TextEditingController(text: profile['pseudo']);
-    final firstNameController = TextEditingController(text: profile['first_name']);
-    final lastNameController = TextEditingController(text: profile['last_name']);
-    final schoolController = TextEditingController(text: profile['school_name']);
-    String selectedClass = profile['class_name'] ?? '6ème';
-
-    final classes = ['6ème', '5ème', '4ème', '3ème', '2nde', '1ère', 'Terminale', 'Autre'];
 
     showModalBottomSheet(
       context: context,
@@ -421,34 +434,6 @@ class ProfileScreen extends StatelessWidget {
                 const Text('Modifier mes infos', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF111111))),
                 const SizedBox(height: 24),
                 _buildTextField('Pseudo', pseudoController, Icons.alternate_email),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(child: _buildTextField('Nom', lastNameController, Icons.person_outline)),
-                    const SizedBox(width: 12),
-                    Expanded(child: _buildTextField('Prénom', firstNameController, Icons.person_outline)),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _buildTextField('École', schoolController, Icons.school_outlined),
-                const SizedBox(height: 16),
-                const Text('Classe', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF9CA3AF))),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFF0EBE0)),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: classes.contains(selectedClass) ? selectedClass : 'Autre',
-                      isExpanded: true,
-                      onChanged: (val) => setState(() => selectedClass = val!),
-                      items: classes.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                    ),
-                  ),
-                ),
                 const SizedBox(height: 32),
                 InkWell(
                   onTap: () {
@@ -462,10 +447,6 @@ class ProfileScreen extends StatelessWidget {
                     // Dispatch Bloc Event
                     context.read<UserBloc>().add(UpdateUserProfile(
                       pseudo: pseudoController.text.trim(),
-                      firstName: firstNameController.text.trim(),
-                      lastName: lastNameController.text.trim(),
-                      school: schoolController.text.trim(),
-                      className: selectedClass,
                     ));
 
                     Navigator.pop(context);
@@ -534,13 +515,72 @@ class ProfileScreen extends StatelessWidget {
           decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0xFFF0EBE0)))),
           child: Column(
             children: [
-              const _SettingItem(icon: Icons.dark_mode_outlined, iconBg: Color(0xFFF3F4F6), title: 'Mode sombre', subtitle: 'Adapter l\'affichage', prefKey: 'dark_mode', defaultValue: false),
-              const _SettingItem(icon: Icons.notifications_none_rounded, iconBg: Color(0xFFEEF2FF), title: 'Notifications', subtitle: 'Rappels de révisions', prefKey: 'notifications_enabled', defaultValue: true),
-              const _SettingItem(icon: Icons.language_rounded, iconBg: Color(0xFFF0FDF4), title: 'Langue', subtitle: 'Français (Burkina Faso)', prefKey: 'language', defaultValue: true, isAction: true),
+              const _SettingItem(
+                icon: Icons.volume_up_outlined,
+                iconBg: Color(0xFFF0FDF4),
+                title: 'Son',
+                subtitle: 'Effets sonores de l\'application',
+                prefKey: 'sound_enabled',
+                defaultValue: true,
+              ),
+              const _SettingItem(
+                icon: Icons.notifications_none_rounded,
+                iconBg: Color(0xFFEEF2FF),
+                title: 'Rappel Notification',
+                subtitle: 'Rappels de révisions quotidiens',
+                prefKey: 'notifications_enabled',
+                defaultValue: true,
+              ),
+              _SettingItem(
+                icon: Icons.info_outline_rounded,
+                iconBg: Color(0xFFF3F4F6),
+                title: 'À propos',
+                subtitle: 'En savoir plus sur KALAN',
+                prefKey: 'about',
+                defaultValue: true,
+                isAction: true,
+                onTap: () => _showAboutDialog(context),
+              ),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  void _showAboutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            _buildLogoSvg(),
+            const SizedBox(width: 10),
+            const Flexible(child: Text('À propos de KALAN', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16))),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'KALAN est ton compagnon d\'apprentissage intelligent conçu pour t\'aider à maîtriser tes cours grâce aux flashcards et à l\'IA.',
+              style: TextStyle(fontSize: 14, color: Color(0xFF4B5563)),
+            ),
+            const SizedBox(height: 16),
+            const Text('Version: 1.0.0', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF9CA3AF))),
+            const SizedBox(height: 8),
+            const Text('Développé avec ❤️ pour l\'éducation.', style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF))),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fermer', style: TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -624,8 +664,18 @@ class _SettingItem extends StatefulWidget {
   final String prefKey;
   final bool defaultValue;
   final bool isAction;
+  final VoidCallback? onTap;
 
-  const _SettingItem({required this.icon, required this.iconBg, required this.title, required this.subtitle, required this.prefKey, required this.defaultValue, this.isAction = false});
+  const _SettingItem({
+    required this.icon,
+    required this.iconBg,
+    required this.title,
+    required this.subtitle,
+    required this.prefKey,
+    required this.defaultValue,
+    this.isAction = false,
+    this.onTap,
+  });
 
   @override
   State<_SettingItem> createState() => _SettingItemState();
@@ -635,7 +685,11 @@ class _SettingItemState extends State<_SettingItem> {
   bool _value = false;
 
   @override
-  void initState() { super.initState(); _loadPref(); }
+  void initState() {
+    super.initState();
+    _loadPref();
+  }
+
   Future<void> _loadPref() async {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) setState(() => _value = prefs.getBool(widget.prefKey) ?? widget.defaultValue);
@@ -643,29 +697,31 @@ class _SettingItemState extends State<_SettingItem> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFF0EBE0)))),
-      child: Row(
-        children: [
-          Container(width: 38, height: 38, decoration: BoxDecoration(color: widget.iconBg, shape: BoxShape.circle), child: Icon(widget.icon, size: 18, color: const Color(0xFF111111))),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(widget.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF111111))), const SizedBox(height: 1), Text(widget.subtitle, style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF)))])),
-          if (widget.isAction) const Icon(Icons.chevron_right, size: 20, color: Color(0xFFD1D5DB))
-          else GestureDetector(
-            onTap: () async {
+    return InkWell(
+      onTap: widget.isAction
+          ? widget.onTap
+          : () async {
               final newValue = !_value;
               final prefs = await SharedPreferences.getInstance();
               await prefs.setBool(widget.prefKey, newValue);
               setState(() => _value = newValue);
             },
-            child: AnimatedContainer(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFF0EBE0)))),
+        child: Row(
+          children: [
+            Container(width: 38, height: 38, decoration: BoxDecoration(color: widget.iconBg, shape: BoxShape.circle), child: Icon(widget.icon, size: 18, color: const Color(0xFF111111))),
+            const SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(widget.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF111111))), const SizedBox(height: 1), Text(widget.subtitle, style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF)))])),
+            if (widget.isAction) const Icon(Icons.chevron_right, size: 20, color: Color(0xFFD1D5DB))
+            else AnimatedContainer(
               duration: const Duration(milliseconds: 200), width: 48, height: 28,
               decoration: BoxDecoration(color: _value ? const Color(0xFF2E7D32) : const Color(0xFFD1D5DB), borderRadius: BorderRadius.circular(14)),
               child: Stack(children: [AnimatedPositioned(duration: const Duration(milliseconds: 200), curve: Curves.easeIn, left: _value ? 23 : 3, top: 3, child: Container(width: 22, height: 22, decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 4, offset: const Offset(0, 1))])))]),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

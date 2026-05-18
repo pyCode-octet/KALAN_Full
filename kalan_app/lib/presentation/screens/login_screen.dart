@@ -87,36 +87,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildLogo() {
-    return Column(
-      children: [
-        Image.asset(
-          'assets/images/kalan_logo.png',
-          width: 120,
-          height: 120,
-          fit: BoxFit.contain,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'KALAN',
-          style: TextStyle(
-            fontSize: 48,
-            color: AppColors.primary,
-            letterSpacing: 6,
-            fontStyle: FontStyle.italic,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        Text(
-          'Le savoir qui grandit avec toi',
-          style: TextStyle(
-            fontSize: 14,
-            color: AppColors.primary,
-            fontWeight: FontWeight.w700,
-            fontStyle: FontStyle.italic,
-            letterSpacing: 1.2,
-          ),
-        ),
-      ],
+    return Image.asset(
+      'assets/images/kalan_logo.png',
+      width: 180,
+      height: 180,
+      fit: BoxFit.contain,
     );
   }
 
@@ -146,14 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => const OnboardingPseudoScreen(
-              registrationData: {
-                'first_name': '',
-                'last_name': '',
-                'school_name': '',
-                'class_id': null,
-              },
-            ),
+            builder: (_) => const OnboardingPseudoScreen(),
           ),
         );
       },

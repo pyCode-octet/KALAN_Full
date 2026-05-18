@@ -18,7 +18,7 @@ class DatabaseHelper {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -39,6 +39,14 @@ class DatabaseHelper {
       } catch (_) {}
       try {
         await db.execute('ALTER TABLE users ADD COLUMN class_id INTEGER');
+      } catch (_) {}
+    }
+    if (oldVersion < 4) {
+      try {
+        await db.execute('ALTER TABLE flashcards ADD COLUMN interval INTEGER DEFAULT 0');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE flashcards ADD COLUMN repetitions INTEGER DEFAULT 0');
       } catch (_) {}
     }
   }
@@ -176,6 +184,18 @@ class DatabaseHelper {
         retry_count INTEGER DEFAULT 0,
         status TEXT DEFAULT 'pending',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS notifications (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        is_read INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL
       )
     ''');
 
@@ -350,13 +370,32 @@ class DatabaseHelper {
       )
     ''');
     
-    // Dynamic database patch migrations
-    try {
-      await db.execute('ALTER TABLE decks ADD COLUMN is_synced INTEGER DEFAULT 0');
-    } catch (_) {}
-    try {
-      await db.execute('ALTER TABLE flashcards ADD COLUMN is_synced INTEGER DEFAULT 0');
-    } catch (_) {}
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS notifications (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        is_read INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL
+      )
+    ''');
+    
+    // Les colonnes is_synced sont déjà incluses dans le CREATE TABLE de la version 3.
+    // Cette section est conservée uniquement pour la compatibilité avec d'anciennes installations.
+    // On utilise PRAGMA table_info pour vérifier l'existence avant d'ALTER.
+    
+    final tablesToCheck = ['decks', 'flashcards', 'quiz_results'];
+    for (var table in tablesToCheck) {
+      final columns = await db.rawQuery('PRAGMA table_info($table)');
+      final hasIsSynced = columns.any((c) => c['name'] == 'is_synced');
+      if (!hasIsSynced) {
+        try {
+          await db.execute('ALTER TABLE $table ADD COLUMN is_synced INTEGER DEFAULT 0');
+        } catch (_) {}
+      }
+    }
 
     await _seedDefaultData(db);
   }
@@ -391,6 +430,76 @@ class DatabaseHelper {
     await db.update(
       'users',
       userData,
+    );
+  }
+
+  Future<void> insertNotification(Map<String, dynamic> notification) async {
+    final db = await instance.database;
+    await db.insert('notifications', notification, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<List<Map<String, dynamic>>> getNotifications(String userId) async {
+    final db = await instance.database;
+    await _ensureTablesAndSeed(db);
+    final results = await db.query(
+      'notifications',
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'created_at DESC',
+    );
+    
+    if (results.isEmpty) {
+      final now = DateTime.now();
+      final notifications = [
+        {
+          'id': 'welcome-1',
+          'user_id': userId,
+          'type': 'review',
+          'title': 'Bienvenue sur KALAN ! 🎉',
+          'message': 'Commence par importer un cours en PDF ou photo pour générer tes premières fiches.',
+          'is_read': 0,
+          'created_at': now.subtract(const Duration(minutes: 5)).toIso8601String(),
+        },
+        {
+          'id': 'welcome-2',
+          'user_id': userId,
+          'type': 'badge',
+          'title': 'Objectif Champion ! 🏆',
+          'message': 'Révise chaque jour pour débloquer de nouveaux badges africains prestigieux.',
+          'is_read': 0,
+          'created_at': now.subtract(const Duration(hours: 2)).toIso8601String(),
+        }
+      ];
+      for (var n in notifications) {
+        await db.insert('notifications', n, conflictAlgorithm: ConflictAlgorithm.ignore);
+      }
+      return await db.query(
+        'notifications',
+        where: 'user_id = ?',
+        whereArgs: [userId],
+        orderBy: 'created_at DESC',
+      );
+    }
+    return results;
+  }
+
+  Future<void> markNotificationsAsRead(String userId) async {
+    final db = await instance.database;
+    await db.update(
+      'notifications',
+      {'is_read': 1},
+      where: 'user_id = ?',
+      whereArgs: [userId],
+    );
+  }
+
+  Future<void> markNotificationAsRead(String id) async {
+    final db = await instance.database;
+    await db.update(
+      'notifications',
+      {'is_read': 1},
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 }

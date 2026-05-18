@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../ai/gemma_service.dart';
 import 'connectivity_service.dart';
-import '../data/remote/supabase_service.dart';
 
 class LocalAIService {
   static final LocalAIService _instance = LocalAIService._internal();
@@ -12,6 +13,13 @@ class LocalAIService {
   final GemmaService _gemmaService = GemmaService();
   final ConnectivityService _connectivityService = ConnectivityService();
 
+  static String get _hfToken => dotenv.env['HF_TOKEN'] ?? '';
+  static const String _hfBaseUrl = 'https://router.huggingface.co/v1/chat/completions';
+  static const List<String> _models = [
+    'Qwen/Qwen2.5-72B-Instruct',
+    'Qwen/Qwen2.5-7B-Instruct',
+  ];
+
   Future<List<Map<String, String>>> generateFlashcards({
     required String text,
     String subject = 'Général',
@@ -20,11 +28,11 @@ class LocalAIService {
     final isOnline = await _connectivityService.isOnline();
     
     if (isOnline) {
-      debugPrint('Mode Online : Utilisation de l\'IA Cloud via Supabase');
+      debugPrint('Mode Online : Utilisation de HuggingFace API');
       try {
         return await _generateOnline(text, subject, level);
       } catch (e) {
-        debugPrint('Erreur IA Cloud, basculement sur l\'IA locale : $e');
+        debugPrint('Erreur HuggingFace API, basculement sur l\'IA locale : $e');
         return await _generateOffline(text, subject, level);
       }
     } else {
@@ -34,24 +42,59 @@ class LocalAIService {
   }
 
   Future<List<Map<String, String>>> _generateOnline(String text, String subject, String level) async {
-    final response = await SupabaseService.client.functions.invoke(
-      'generate-flashcards',
-      body: {
-        'text': text,
-        'subject': subject,
-        'level': level,
-      },
-    );
+    final prompt = _buildFlashcardPrompt(text, subject, level);
+    
+    for (final model in _models) {
+      try {
+        debugPrint('Tentative avec le modèle: $model');
+        
+        final response = await http.post(
+          Uri.parse(_hfBaseUrl),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $_hfToken',
+          },
+          body: jsonEncode({
+            'model': model,
+            'messages': [
+              {'role': 'user', 'content': prompt}
+            ],
+            'temperature': 0.7,
+            'max_tokens': 1024,
+          }),
+        ).timeout(const Duration(seconds: 60));
 
-    if (response.status != 200) {
-      throw Exception('Erreur Edge Function: ${response.status}');
+        if (response.statusCode == 503) {
+          debugPrint('Modèle $model en chargement, essai du suivant...');
+          continue;
+        }
+
+        if (response.statusCode == 429) {
+          debugPrint('Quota dépassé pour $model, essai du suivant...');
+          continue;
+        }
+
+        if (response.statusCode != 200) {
+          debugPrint('Erreur $model: ${response.statusCode} - ${response.body}');
+          continue;
+        }
+
+        final data = jsonDecode(response.body);
+        final rawText = data['choices']?[0]?['message']?['content']?.toString() ?? '';
+        
+        debugPrint('Réponse HuggingFace reçue via $model (${rawText.length} caractères)');
+        if (rawText.isNotEmpty) {
+          return _parseFlashcards(rawText);
+        }
+        continue;
+      } catch (e) {
+        debugPrint('Erreur avec $model: $e');
+        continue;
+      }
     }
+    
 
-    final List<dynamic> flashcards = response.data['flashcards'];
-    return flashcards.map((f) => {
-      'question': f['question']?.toString() ?? f['q']?.toString() ?? '',
-      'answer': f['answer']?.toString() ?? f['a']?.toString() ?? '',
-    }).toList();
+    throw Exception('Tous les modèles HuggingFace ont échoué');
   }
 
   Future<List<Map<String, String>>> _generateOffline(String text, String subject, String level) async {
@@ -91,12 +134,18 @@ $text
       final jsonStr = raw.substring(jsonStart, jsonEnd);
       final List<dynamic> parsed = jsonDecode(jsonStr);
       
-      return parsed.map((item) => {
-        'question': (item['question'] ?? item['q'] ?? '').toString(),
-        'answer': (item['answer'] ?? item['a'] ?? '').toString(),
-      }).toList();
+      // Filtrer les cartes vides
+      final cards = parsed.map((item) => {
+        'question': (item['question'] ?? item['q'] ?? '').toString().trim(),
+        'answer': (item['answer'] ?? item['a'] ?? '').toString().trim(),
+      })
+      .where((card) => card['question']!.isNotEmpty && card['answer']!.isNotEmpty)
+      .toList();
+      
+      debugPrint('✅ Parsing réussi: ${cards.length}/${parsed.length} cartes valides');
+      return cards;
     } catch (e) {
-      debugPrint('Parsing error, using fallback parser: $e');
+      debugPrint('❌ Parsing error, using fallback parser: $e');
       return _regexFallbackParse(raw);
     }
   }

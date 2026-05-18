@@ -8,6 +8,9 @@ import 'package:kalan_app/presentation/screens/flashcard_study_screen.dart';
 import '../../core/constants/app_colors.dart';
 import '../../data/local/database_helper.dart';
 import '../../services/local_ai_service.dart';
+import '../../data/repositories/deck_repository_impl.dart';
+import '../blocs/user/user_bloc.dart';
+import '../blocs/user/user_event.dart';
 
 class GeneratingScreen extends StatefulWidget {
   final String ocrText;
@@ -30,6 +33,7 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
   Timer? _stepTimer;
   bool _aiFinished = false;
   final Uuid _uuid = const Uuid();
+  bool _isRedirecting = false;
 
   @override
   void initState() {
@@ -52,7 +56,7 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
           _currentStep++;
         } else {
           _stepTimer?.cancel();
-          if (_aiFinished) {
+          if (_aiFinished && !_isRedirecting) {
             _autoSaveAndRedirect();
           }
         }
@@ -95,7 +99,7 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
         _aiFinished = true;
         
         // Si les étapes visuelles sont déjà finies, on redirige
-        if (_currentStep >= 3) {
+        if (_currentStep >= 3 && !_isRedirecting) {
           _autoSaveAndRedirect();
         }
       });
@@ -103,6 +107,9 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
   }
 
   Future<void> _autoSaveAndRedirect() async {
+    if (_isRedirecting) return;
+    setState(() => _isRedirecting = true);
+
     if (_flashcards.isEmpty) {
       if (mounted) {
         Navigator.pop(context);
@@ -122,26 +129,41 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
 
     final String deckUuid = _uuid.v4();
 
-    // Sauvegarde automatique via le Bloc
-    context.read<DeckBloc>().add(CreateDeck(
-      title,
-      _selectedSubject,
-      _selectedLevel,
-      cards: _flashcards,
-      uuid: deckUuid,
-    ));
-
-    // Redirection immédiate
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => FlashcardStudyScreen(
-            deckTitle: title,
-            deckUuid: deckUuid,
-          ),
-        ),
+    try {
+      // On utilise le Repository directement pour attendre la fin de l'insertion
+      // Cela garantit que FlashcardStudyScreen trouvera les cartes
+      final repository = context.read<DeckRepositoryImpl>();
+      await repository.createDeck(
+        title,
+        _selectedSubject,
+        _selectedLevel,
+        cards: _flashcards,
+        uuid: deckUuid,
       );
+
+      // On notifie le Bloc pour rafraîchir la liste en arrière-plan
+      context.read<DeckBloc>().add(const LoadDecks());
+      // On recharge aussi le profil et les activités récentes
+      context.read<UserBloc>().add(LoadUserProfile());
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => FlashcardStudyScreen(
+              deckTitle: title,
+              deckUuid: deckUuid,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isRedirecting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erreur lors de la sauvegarde : $e"))
+        );
+      }
     }
   }
 
@@ -158,7 +180,7 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
             Positioned(bottom: 150, left: 60, child: Opacity(opacity: 0.1, child: Text('📐', style: TextStyle(fontSize: 44)))),
             Positioned(bottom: 80, right: 70, child: Opacity(opacity: 0.1, child: Text('🧪', style: TextStyle(fontSize: 48)))),
             
-            Padding(
+            SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Column(
                 children: [
@@ -175,7 +197,8 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
                   ),
                   
                   // Loader
-                  Expanded(
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.4,
                     child: Center(
                       child: Stack(
                         alignment: Alignment.center,
@@ -231,13 +254,18 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
                     ),
                   ),
                   const SizedBox(height: 40),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 32),
-                      child: Text('ANNULER LA GÉNÉRATION', style: TextStyle(color: Colors.grey.shade400, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                  
+                  if (_isRedirecting)
+                    const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary))
+                  else
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 32),
+                        child: Text('ANNULER LA GÉNÉRATION', style: TextStyle(color: Colors.grey.shade400, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                      ),
                     ),
-                  ),
+                  const SizedBox(height: 40),
                 ],
               ),
             ),

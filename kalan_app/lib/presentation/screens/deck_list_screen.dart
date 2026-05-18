@@ -100,12 +100,6 @@ class DeckListScreen extends StatelessWidget {
           return const SizedBox.shrink();
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'fab_deck',
-        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateDeckScreen())),
-        backgroundColor: AppColors.secondary,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
     );
   }
 

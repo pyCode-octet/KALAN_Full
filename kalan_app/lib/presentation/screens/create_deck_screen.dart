@@ -30,14 +30,6 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
   @override
   void initState() {
     super.initState();
-    _checkModel();
-  }
-
-  Future<void> _checkModel() async {
-    final hasModel = await ModelDownloader.isModelDownloaded();
-    if (!hasModel && mounted) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const ModelDownloadScreen()));
-    }
   }
 
   Future<void> _generateAI() async {

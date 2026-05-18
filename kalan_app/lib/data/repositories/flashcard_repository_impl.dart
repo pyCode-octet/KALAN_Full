@@ -19,10 +19,11 @@ class FlashcardRepositoryImpl implements FlashcardRepository {
   Future<List<Flashcard>> getFlashcardsByDeck(String deckUuid) async {
     final db = await _dbHelper.database;
     
-    // 1. Local Query with Subquery as requested
-    final localMaps = await db.rawQuery(
-      'SELECT * FROM flashcards WHERE deck_id = (SELECT CAST(id AS TEXT) FROM decks WHERE uuid = ?)',
-      [deckUuid]
+    // 1. Local Query - Simple and direct using UUID
+    final localMaps = await db.query(
+      'flashcards',
+      where: 'deck_id = ?',
+      whereArgs: [deckUuid],
     );
     final localCards = localMaps.map((m) => FlashcardModel.fromMap(m)).toList();
     
@@ -43,29 +44,23 @@ class FlashcardRepositoryImpl implements FlashcardRepository {
             .map((json) => FlashcardModel.fromSupabaseJson(json))
             .toList();
 
-        // Get local deck ID to use as deck_id in local SQLite
-        final deckLocal = await db.query('decks', columns: ['id'], where: 'uuid = ?', whereArgs: [deckUuid]);
-        if (deckLocal.isNotEmpty) {
-          final String localDeckId = deckLocal.first['id'].toString();
-
-          for (var remoteCard in remoteCards) {
-            if (!mergedCards.containsKey(remoteCard.uuid)) {
-              // Create a model compatible with local storage (using local deck integer ID)
-              final modelToSave = FlashcardModel(
-                uuid: remoteCard.uuid,
-                deckId: localDeckId,
-                question: remoteCard.question,
-                answer: remoteCard.answer,
-                difficulty: remoteCard.difficulty,
-                nextReview: remoteCard.nextReview,
-                interval: remoteCard.interval,
-                repetitions: remoteCard.repetitions,
-                createdAt: remoteCard.createdAt,
-                isSynced: true,
-              );
-              mergedCards[remoteCard.uuid] = modelToSave;
-              await db.insert('flashcards', modelToSave.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
-            }
+        for (var remoteCard in remoteCards) {
+          if (!mergedCards.containsKey(remoteCard.uuid)) {
+            // Use UUID for deck_id locally as well
+            final modelToSave = FlashcardModel(
+              uuid: remoteCard.uuid,
+              deckId: deckUuid,
+              question: remoteCard.question,
+              answer: remoteCard.answer,
+              difficulty: remoteCard.difficulty,
+              nextReview: remoteCard.nextReview,
+              interval: remoteCard.interval,
+              repetitions: remoteCard.repetitions,
+              createdAt: remoteCard.createdAt,
+              isSynced: true,
+            );
+            mergedCards[remoteCard.uuid] = modelToSave;
+            await db.insert('flashcards', modelToSave.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
           }
         }
       } catch (e) {
@@ -87,17 +82,11 @@ class FlashcardRepositoryImpl implements FlashcardRepository {
   @override
   Future<void> createFlashcard(String deckUuid, String question, String answer) async {
     final db = await _dbHelper.database;
-    
-    // Récupère deck_id local via uuid
-    final deckLocal = await db.query('decks', columns: ['id'], where: 'uuid = ?', whereArgs: [deckUuid]);
-    if (deckLocal.isEmpty) return;
-    
-    final String localDeckId = deckLocal.first['id'].toString();
     final String uuid = _uuid.v4();
     
     final model = FlashcardModel(
       uuid: uuid,
-      deckId: localDeckId,
+      deckId: deckUuid, // Use UUID instead of local integer ID
       question: question,
       answer: answer,
       createdAt: DateTime.now(),
@@ -109,8 +98,7 @@ class FlashcardRepositoryImpl implements FlashcardRepository {
 
     // 2. Sync
     final supabasePayload = model.toSupabaseJson();
-    // For Supabase, deck_id must be the deckUuid
-    supabasePayload['deck_id'] = deckUuid;
+    // For Supabase, deck_id is already the deckUuid in our model
 
     if (await _connectivity.isOnline()) {
       try {

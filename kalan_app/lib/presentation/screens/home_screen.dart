@@ -11,7 +11,8 @@ import 'create_deck_screen.dart';
 import 'camera_ocr_screen.dart';
 import 'generating_screen.dart';
 import '../../services/pdf_service.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:file_picker/file_picker.dart' as fp;
+import '../../ai/model_downloader.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -27,6 +28,34 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     context.read<UserBloc>().add(LoadUserProfile());
+    _startSilentModelDownload();
+  }
+
+  void _startSilentModelDownload() async {
+    try {
+      final hasModel = await ModelDownloader.isModelDownloaded();
+      if (!hasModel) {
+        debugPrint("[KALAN AI] Modèle local manquant. Démarrage du téléchargement silencieux en arrière-plan...");
+        ModelDownloader.downloadModel().listen(
+          (progress) {
+            if (progress > 0) {
+              debugPrint("[KALAN AI] Progression téléchargement silencieux: ${(progress * 100).toInt()}%");
+            }
+          },
+          onDone: () {
+            debugPrint("[KALAN AI] Téléchargement silencieux terminé avec succès ! L'IA offline est active.");
+          },
+          onError: (e) {
+            debugPrint("[KALAN AI] Échec du téléchargement silencieux : $e. Une nouvelle tentative aura lieu au prochain démarrage.");
+          },
+          cancelOnError: true,
+        );
+      } else {
+        debugPrint("[KALAN AI] Modèle local déjà présent et opérationnel !");
+      }
+    } catch (e) {
+      debugPrint("[KALAN AI] Erreur lors de l'initialisation du téléchargement : $e");
+    }
   }
 
   final List<Widget> _screens = [
@@ -155,53 +184,61 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: 'Importer un PDF',
                 subtitle: 'Fichier PDF (max 10 pages)',
                 onTap: () async {
+                  final parentNavigator = Navigator.of(this.context);
+                  final parentScaffold = ScaffoldMessenger.of(this.context);
                   Navigator.pop(context);
-                  FilePickerResult? result = await FilePicker.pickFiles(
-                    type: FileType.custom,
-                    allowedExtensions: ['pdf'],
-                  );
 
-                  if (result != null && result.files.single.path != null) {
-                    // Afficher un petit indicateur de chargement
-                    if (!mounted) return;
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) => const Center(child: CircularProgressIndicator()),
+                  try {
+                    fp.FilePickerResult? result = await fp.FilePicker.pickFiles(
+                      type: fp.FileType.custom,
+                      allowedExtensions: ['pdf'],
+                      withData: false,
                     );
 
-                    try {
-                      final text = await PdfService().extractText(result.files.single.path!);
+                    if (result != null && result.files.single != null) {
+                      final singleFile = result.files.single;
+                      
+                      if (!mounted) return;
+                      showDialog(
+                        context: this.context,
+                        barrierDismissible: false,
+                        builder: (_) => const Center(child: CircularProgressIndicator()),
+                      );
+
+                      final text = await PdfService().extractText(
+                        filePath: singleFile.path,
+                        bytes: singleFile.bytes,
+                      );
+
                       if (mounted) {
-                        Navigator.pop(context); // Fermer le loader
-                        Navigator.push(
-                          context, 
-                          MaterialPageRoute(builder: (_) => GeneratingScreen(ocrText: text))
-                        );
+                        parentNavigator.pop(); // Fermer le loader
+                        if (text.isEmpty) {
+                          parentScaffold.showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                "Ce PDF ne contient pas de texte sélectionnable (PDF scanné). Utilise l'option 'Scanner un cours' !",
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              backgroundColor: Colors.orange,
+                              duration: Duration(seconds: 6),
+                            ),
+                          );
+                        } else {
+                          parentNavigator.push(
+                            MaterialPageRoute(builder: (_) => GeneratingScreen(ocrText: text)),
+                          );
+                        }
                       }
-                    } catch (e) {
-                      if (mounted) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Erreur : $e')),
-                        );
-                      }
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      parentScaffold.showSnackBar(
+                        SnackBar(content: Text('Erreur lors de l\'import : $e')),
+                      );
                     }
                   }
                 },
               ),
-              const SizedBox(height: 16),
-              _createOptionItem(
-                icon: Icons.edit_note_rounded,
-                color: const Color(0xFF854F0B),
-                title: 'Saisie manuelle',
-                subtitle: 'Écrire ou coller ton cours',
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateDeckScreen()));
-                },
-              ),
-              const SizedBox(height: 16),
             ],
           ),
         ),

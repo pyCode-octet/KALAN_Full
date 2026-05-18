@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/entities/quiz_result.dart';
 import '../../domain/repositories/quiz_repository.dart';
 import '../local/database_helper.dart';
@@ -15,8 +16,8 @@ class QuizRepositoryImpl implements QuizRepository {
   @override
   Future<void> saveQuizResult(String? deckId, int score, int total, int duration) async {
     final db = await _dbHelper.database;
-    final user = SupabaseService.currentUser;
-    final String userId = user?.id ?? 'guest';
+    final prefs = await SharedPreferences.getInstance();
+    final String userId = prefs.getString('current_user_uuid') ?? 'guest';
 
     final model = QuizResultModel(
       userId: userId,

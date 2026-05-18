@@ -8,13 +8,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../widgets/kalan_button.dart';
 import 'home_screen.dart';
+import 'login_screen.dart';
 
 class OnboardingPseudoScreen extends StatefulWidget {
-  final Map<String, dynamic> registrationData;
+  final Map<String, dynamic>? registrationData;
 
   const OnboardingPseudoScreen({
     super.key,
-    required this.registrationData,
+    this.registrationData,
   });
 
   @override
@@ -40,8 +41,6 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
                 children: [
                   const SizedBox(height: 20),
                   _buildLogo(),
-                  const SizedBox(height: 35),
-                  _buildProgressIndicator(),
                   const SizedBox(height: 35),
                   Text(
                     'Choisis ton pseudo',
@@ -90,9 +89,31 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
                   if (_isLoading)
                     const CircularProgressIndicator()
                   else
-                    KalanButton(
-                      text: 'Commencer mon aventure',
-                      onPressed: _handleStartAventure,
+                    Column(
+                      children: [
+                        KalanButton(
+                          text: 'Commencer mon aventure',
+                          onPressed: _handleStartAventure,
+                        ),
+                        const SizedBox(height: 20),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (_) => const LoginScreen()),
+                            );
+                          },
+                          child: Text(
+                            'Déjà un compte ? Connecte-toi ici',
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.underline,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   const SizedBox(height: 25),
                 ],
@@ -126,95 +147,14 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
   }
 
   Widget _buildLogo() {
-    return Column(
-      children: [
-        Image.asset(
-          'assets/images/kalan_logo.png',
-          width: 94,
-          height: 94,
-          fit: BoxFit.contain,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'KALAN',
-          style: TextStyle(
-            fontSize: 40,
-            color: AppColors.primary,
-            letterSpacing: 5,
-            fontStyle: FontStyle.italic,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        Text(
-          'Le savoir qui grandit avec toi',
-          style: TextStyle(
-            fontSize: 12,
-            color: AppColors.primary,
-            fontWeight: FontWeight.w700,
-            fontStyle: FontStyle.italic,
-            letterSpacing: 1,
-          ),
-        ),
-      ],
+    return Image.asset(
+      'assets/images/kalan_logo.png',
+      width: 160,
+      height: 160,
+      fit: BoxFit.contain,
     );
   }
 
-  Widget _buildProgressIndicator() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // _buildStep(1, 'Infos', true, done: true),
-        // _buildLine(),
-        _buildStep(1, 'Pseudo', true),
-        _buildLine(),
-        _buildStep(2, 'Avatar', false),
-      ],
-    );
-  }
-
-  Widget _buildStep(int step, String label, bool active, {bool done = false}) {
-    return Column(
-      children: [
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: active ? AppColors.primary : Colors.grey[200],
-            shape: BoxShape.circle,
-          ),
-          alignment: Alignment.center,
-          child: done
-              ? const Icon(Icons.check, color: Colors.white, size: 20)
-              : Text(
-                  step.toString(),
-                  style: TextStyle(
-                    color: active ? Colors.white : const Color(0xFF1A1A1A),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[600],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLine() {
-    return Container(
-      width: 40,
-      height: 2,
-      margin: const EdgeInsets.only(bottom: 22, left: 4, right: 4),
-      color: Colors.grey[300],
-    );
-  }
 
   Widget _buildInputBox(String hint) {
     return Container(
@@ -298,78 +238,53 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
 
   Future<void> _handleStartAventure() async {
     final pseudo = _pseudoController.text.trim();
-    if (pseudo.isEmpty) {
+    if (pseudo.length < 3 || pseudo.length > 20) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Entre ton pseudo')),
+        const SnackBar(content: Text('Le pseudo doit faire entre 3 et 20 caractères')),
       );
       return;
     }
 
     setState(() => _isLoading = true);
     try {
-      // 1. Gérer l'école (school_id)
-      final schoolName = widget.registrationData['school_name'] as String? ?? '';
-      int? schoolId;
-      
-      /*
-      if (schoolName.isNotEmpty) {
-        try {
-          final existingSchool = await SupabaseService.client
-              .from('schools')
-              .select('id')
-              .eq('name', schoolName)
-              .maybeSingle();
-          
-          if (existingSchool != null) {
-            schoolId = existingSchool['id'] as int;
-          } else {
-            final newSchool = await SupabaseService.client
-                .from('schools')
-                .insert({'name': schoolName})
-                .select('id')
-                .single();
-            schoolId = newSchool['id'] as int;
+      // 1. Vérification d'unicité locale (SQLite)
+      final existingLocal = await DatabaseHelper.instance.getUserByPseudo(pseudo);
+      if (existingLocal != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Ce pseudo est déjà pris localement !'), backgroundColor: Colors.red),
+          );
+          setState(() => _isLoading = false);
+        }
+        return;
+      }
+
+      // 2. Vérification d'unicité distante (Supabase)
+      try {
+        final existingRemote = await SupabaseService.client
+            .from('users')
+            .select('uuid')
+            .eq('pseudo', pseudo)
+            .maybeSingle();
+        if (existingRemote != null) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Ce pseudo est déjà pris, choisis-en un autre !'), backgroundColor: Colors.red),
+            );
+            setState(() => _isLoading = false);
           }
-        } catch (e) {
-          debugPrint('Erreur gestion ecole: $e');
-          // Mode hors-ligne : on continue sans school_id
+          return;
         }
+      } catch (e) {
+        debugPrint('Erreur vérification pseudo en ligne (mode hors-ligne probable): $e');
       }
-      */
 
-      // 2. Générer UUID local
+      // 3. Générer UUID local
       final uuid = const Uuid().v4();
-
-      // 3. Récupérer le nom de la classe
-      final classId = widget.registrationData['class_id'] as int?;
-      String? className;
-      /*
-      if (classId != null) {
-        try {
-          final classData = await SupabaseService.client
-              .from('classes')
-              .select('name')
-              .eq('id', classId)
-              .single();
-          className = classData['name'] as String;
-        } catch (e) {
-          className = 'Inconnue';
-        }
-      } else {
-        className = 'Non définie';
-      }
-      */
-      className = 'Non définie';
 
       final userModel = UserModel(
         uuid: uuid,
         pseudo: pseudo,
-        firstName: widget.registrationData['first_name'] ?? '',
-        lastName: widget.registrationData['last_name'] ?? '',
-        schoolId: schoolId,
-        schoolName: schoolName.isNotEmpty ? schoolName : null,
-        classId: classId,
-        className: className,
         avatarId: _selectedAvatar,
         isGuest: false,
         createdAt: DateTime.now(),

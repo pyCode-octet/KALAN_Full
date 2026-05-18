@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:kalan_app/core/theme/app_theme.dart';
 import 'package:kalan_app/core/utils/text_scale.dart';
@@ -10,6 +11,7 @@ import 'package:kalan_app/data/repositories/flashcard_repository_impl.dart';
 import 'package:kalan_app/data/repositories/quiz_repository_impl.dart';
 import 'package:kalan_app/data/repositories/user_repository_impl.dart';
 import 'package:kalan_app/data/repositories/badge_repository_impl.dart';
+import 'package:kalan_app/data/repositories/notification_repository_impl.dart';
 import 'package:kalan_app/presentation/blocs/deck/deck_bloc.dart';
 import 'package:kalan_app/presentation/blocs/deck/deck_event.dart';
 import 'package:kalan_app/presentation/blocs/flashcard/flashcard_bloc.dart';
@@ -18,6 +20,7 @@ import 'package:kalan_app/presentation/blocs/sync/sync_bloc.dart';
 import 'package:kalan_app/presentation/blocs/user/user_bloc.dart';
 import 'package:kalan_app/presentation/blocs/badge/badge_bloc.dart';
 import 'package:kalan_app/presentation/blocs/leaderboard/leaderboard_bloc.dart';
+import 'package:kalan_app/presentation/blocs/notification/notification_bloc.dart';
 import 'package:kalan_app/data/repositories/leaderboard_repository_impl.dart';
 import 'package:kalan_app/services/sync_service.dart';
 import 'package:kalan_app/presentation/screens/home_screen.dart';
@@ -27,14 +30,16 @@ import 'package:kalan_app/services/connectivity_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await dotenv.load(fileName: ".env");
+
   String supabaseUrl = const String.fromEnvironment('SUPABASE_URL');
   String supabaseKey = const String.fromEnvironment('SUPABASE_ANON_KEY');
 
   if (supabaseUrl.isEmpty) {
-    supabaseUrl = 'https://cxljiqtrdadlaayvrmik.supabase.co';
+    supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
   }
   if (supabaseKey.isEmpty) {
-    supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN4bGppcXRyZGFkbGFheXZybWlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MjU1NjIsImV4cCI6MjA5NDIwMTU2Mn0.RhrIiLK2qRek1w4ExMo8DVchz4ghHK6svXZGZZlO0Lw';
+    supabaseKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
   }
 
   await SupabaseService.initialize(
@@ -52,6 +57,7 @@ void main() async {
   final userRepo = UserRepositoryImpl(dbHelper, connectivity);
   final badgeRepo = BadgeRepositoryImpl(dbHelper, connectivity);
   final leaderboardRepo = LeaderboardRepositoryImpl(dbHelper, connectivity);
+  final notificationRepo = NotificationRepositoryImpl();
 
   if (SupabaseService.currentUser != null) {
     SyncService.instance.init();
@@ -67,6 +73,7 @@ void main() async {
         RepositoryProvider<UserRepositoryImpl>.value(value: userRepo),
         RepositoryProvider<BadgeRepositoryImpl>.value(value: badgeRepo),
         RepositoryProvider<LeaderboardRepositoryImpl>.value(value: leaderboardRepo),
+        RepositoryProvider<NotificationRepositoryImpl>.value(value: notificationRepo),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -89,6 +96,9 @@ void main() async {
             create: (_) => LeaderboardBloc(leaderboardRepo),
           ),
           BlocProvider<SyncBloc>(create: (_) => SyncBloc()),
+          BlocProvider<NotificationBloc>(
+            create: (_) => NotificationBloc(notificationRepo),
+          ),
         ],
         child: const KalanApp(),
       ),

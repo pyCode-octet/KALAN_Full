@@ -7,6 +7,8 @@ import '../models/deck_model.dart';
 import '../remote/supabase_service.dart';
 import '../../services/connectivity_service.dart';
 import 'package:uuid/uuid.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 class DeckRepositoryImpl implements DeckRepository {
   final DatabaseHelper _dbHelper;
@@ -119,11 +121,13 @@ class DeckRepositoryImpl implements DeckRepository {
   Future<void> createDeck(String title, String subject, String? level, {List<Map<String, String>>? cards, String? uuid}) async {
     final db = await _dbHelper.database;
     final user = SupabaseService.currentUser;
+    final prefs = await SharedPreferences.getInstance();
+    final String currentUserId = prefs.getString('current_user_uuid') ?? user?.id ?? 'guest';
     final String deckUuid = uuid ?? _uuid.v4();
     
     final model = DeckModel(
       uuid: deckUuid,
-      userId: user?.id ?? 'guest',
+      userId: currentUserId,
       title: title,
       subject: subject,
       level: level,

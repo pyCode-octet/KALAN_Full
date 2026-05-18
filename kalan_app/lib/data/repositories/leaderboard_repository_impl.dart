@@ -32,13 +32,7 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
       try {
         var query = SupabaseService.client
             .from('users')
-            .select('uuid, pseudo, avatar_url, points, school_name, class_name');
-
-        if (scope == 'school') {
-          query = query.eq('school_name', mySchool ?? 'Non définie');
-        } else if (scope == 'class') {
-          query = query.eq('class_name', myClass ?? 'Non définie');
-        }
+            .select('uuid, pseudo, avatar_url, points');
 
         final response = await query
             .order('points', ascending: false)

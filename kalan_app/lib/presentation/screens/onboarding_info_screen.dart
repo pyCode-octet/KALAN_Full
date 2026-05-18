@@ -167,36 +167,11 @@ class _OnboardingInfoScreenState extends State<OnboardingInfoScreen> {
   }
 
   Widget _buildLogo() {
-    return Column(
-      children: [
-        Image.asset(
-          'assets/images/kalan_logo.png',
-          width: 94,
-          height: 94,
-          fit: BoxFit.contain,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'KALAN',
-          style: TextStyle(
-            fontSize: 40,
-            color: AppColors.primary,
-            letterSpacing: 5,
-            fontStyle: FontStyle.italic,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        Text(
-          'Le savoir qui grandit avec toi',
-          style: TextStyle(
-            fontSize: 12,
-            color: AppColors.primary,
-            fontWeight: FontWeight.w700,
-            fontStyle: FontStyle.italic,
-            letterSpacing: 1,
-          ),
-        ),
-      ],
+    return Image.asset(
+      'assets/images/kalan_logo.png',
+      width: 160,
+      height: 160,
+      fit: BoxFit.contain,
     );
   }
 

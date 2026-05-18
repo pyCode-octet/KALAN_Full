@@ -91,7 +91,7 @@ class _ModelDownloadScreenState extends State<ModelDownloadScreen> {
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    'Pour fonctionner sans internet, l\'IA locale nécessite un téléchargement unique de 1.5 GB.',
+                    'Pour fonctionner sans internet, l\'IA locale nécessite un téléchargement unique de ~350 Mo.',
                     style: TextStyle(fontSize: 15, color: Color(0xFF555555), height: 1.4),
                     textAlign: TextAlign.center,
                   ),
@@ -169,7 +169,7 @@ class _ModelDownloadScreenState extends State<ModelDownloadScreen> {
                           elevation: 2,
                         ),
                         child: const Text(
-                          'Télécharger l\'IA (1.5 GB)',
+                          'Télécharger l\'IA (~350 Mo)',
                           style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                       ),

@@ -19,6 +19,7 @@ class _CameraOCRScreenState extends State<CameraOCRScreen> {
   bool _isInitializing = true;
   final OCRService _ocrService = OCRService();
   final ImagePicker _picker = ImagePicker();
+  bool _isPickingImage = false;
 
   @override
   void initState() {
@@ -223,9 +224,17 @@ class _CameraOCRScreenState extends State<CameraOCRScreen> {
                     IconButton(
                       icon: const Icon(Icons.photo_library, color: Colors.white, size: 30),
                       onPressed: () async {
-                        final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-                        if (image != null) {
-                          setState(() => _capturedImages.add(image));
+                        if (_isPickingImage) return;
+                        setState(() => _isPickingImage = true);
+                        try {
+                          final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+                          if (image != null) {
+                            setState(() => _capturedImages.add(image));
+                          }
+                        } finally {
+                          if (mounted) {
+                            setState(() => _isPickingImage = false);
+                          }
                         }
                       },
                     ),
