@@ -7,6 +7,14 @@ abstract class UserEvent extends Equatable {
 }
 
 class LoadUserProfile extends UserEvent {}
+
+class AddPoints extends UserEvent {
+  final int points;
+  const AddPoints(this.points);
+  @override
+  List<Object?> get props => [points];
+}
+
 class UpdateUserProfile extends UserEvent {
   final String? pseudo;
   final String? avatar;

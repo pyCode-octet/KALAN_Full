@@ -28,12 +28,14 @@ class AuthService {
     }
     
     static async register({ firstName, lastName, pseudo, school_id, class_id, uuid: existingUuid }) {
+        /*
         if (!firstName || firstName.length < 2) {
             throw new Error('Le prénom doit contenir au moins 2 caractères');
         }
         if (!lastName || lastName.length < 2) {
             throw new Error('Le nom doit contenir au moins 2 caractères');
         }
+        */
         if (!pseudo || pseudo.length < 2) {
             throw new Error('Le pseudo doit contenir au moins 2 caractères');
         }

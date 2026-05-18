@@ -8,6 +8,10 @@ import 'library_screen.dart';
 import 'profile_screen.dart';
 import 'deck_list_screen.dart';
 import 'create_deck_screen.dart';
+import 'camera_ocr_screen.dart';
+import 'generating_screen.dart';
+import '../../services/pdf_service.dart';
+import 'package:file_picker/file_picker.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -67,15 +71,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildCenterButton() {
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateDeckScreen())),
+      onTap: () => _showCreateOptions(context),
       child: Container(
         width: 52,
         height: 52,
-        margin: EdgeInsets.only(bottom: 10),
+        margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
           color: AppColors.primary,
           shape: BoxShape.circle,
-          border: Border.all(color: AppColors.background, width: 4),
+          border: Border.all(color: Colors.white, width: 4),
           boxShadow: [
             BoxShadow(
               color: AppColors.primary.withValues(alpha: 0.3),
@@ -84,7 +88,166 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        child: Icon(Icons.camera_alt_rounded, color: Colors.white, size: 24),
+        child: const Icon(Icons.add_rounded, color: Colors.white, size: 30),
+      ),
+    );
+  }
+
+  void _showCreateOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: const EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 24,
+          bottom: 24,
+        ),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Text(
+                'Créer une nouvelle fiche',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 24),
+              _createOptionItem(
+                icon: Icons.camera_alt_rounded,
+                color: const Color(0xFF2D6A2D),
+                title: 'Scanner un cours',
+                subtitle: 'Prendre une photo de tes notes',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraOCRScreen()));
+                },
+              ),
+              const SizedBox(height: 16),
+              _createOptionItem(
+                icon: Icons.photo_library_rounded,
+                color: const Color(0xFF185FA5),
+                title: 'Importer une image',
+                subtitle: 'Depuis ta galerie photos',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CameraOCRScreen()));
+                },
+              ),
+              const SizedBox(height: 16),
+              _createOptionItem(
+                icon: Icons.picture_as_pdf_rounded,
+                color: const Color(0xFFE24B4A),
+                title: 'Importer un PDF',
+                subtitle: 'Fichier PDF (max 10 pages)',
+                onTap: () async {
+                  Navigator.pop(context);
+                  FilePickerResult? result = await FilePicker.pickFiles(
+                    type: FileType.custom,
+                    allowedExtensions: ['pdf'],
+                  );
+
+                  if (result != null && result.files.single.path != null) {
+                    // Afficher un petit indicateur de chargement
+                    if (!mounted) return;
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (context) => const Center(child: CircularProgressIndicator()),
+                    );
+
+                    try {
+                      final text = await PdfService().extractText(result.files.single.path!);
+                      if (mounted) {
+                        Navigator.pop(context); // Fermer le loader
+                        Navigator.push(
+                          context, 
+                          MaterialPageRoute(builder: (_) => GeneratingScreen(ocrText: text))
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Erreur : $e')),
+                        );
+                      }
+                    }
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              _createOptionItem(
+                icon: Icons.edit_note_rounded,
+                color: const Color(0xFF854F0B),
+                title: 'Saisie manuelle',
+                subtitle: 'Écrire ou coller ton cours',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateDeckScreen()));
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _createOptionItem({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade100),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  Text(subtitle, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
+          ],
+        ),
       ),
     );
   }

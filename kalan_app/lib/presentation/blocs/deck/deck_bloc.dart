@@ -25,7 +25,7 @@ class DeckBloc extends Bloc<DeckEvent, DeckState> {
 
   Future<void> _onCreateDeck(CreateDeck event, Emitter<DeckState> emit) async {
     try {
-      await _repository.createDeck(event.title, event.subject, event.level);
+      await _repository.createDeck(event.title, event.subject, event.level, cards: event.cards, uuid: event.uuid);
       add(const LoadDecks());
     } catch (e) {
       emit(const DeckError('Erreur création deck'));

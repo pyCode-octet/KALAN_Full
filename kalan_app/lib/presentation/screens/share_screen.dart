@@ -4,9 +4,12 @@ import 'dart:convert';
 import 'dart:async';
 import '../../core/constants/app_colors.dart';
 import '../../data/local/database_helper.dart';
+import '../../domain/entities/deck.dart';
+import '../../data/remote/supabase_service.dart';
 
 class ShareScreen extends StatefulWidget {
-  const ShareScreen({super.key});
+  final Deck? deck; // Optionnel: si null, on peut proposer de choisir ou partager le dernier
+  const ShareScreen({super.key, this.deck});
 
   @override
   State<ShareScreen> createState() => _ShareScreenState();
@@ -60,18 +63,33 @@ class _ShareScreenState extends State<ShareScreen> {
 
   Future<void> _sendDeck(BluetoothDevice device) async {
     try {
-      final decks = await DatabaseHelper.instance.getDecks('current_user');
-      if (decks.isEmpty) {
-        _showSnackBar('Aucun deck à envoyer');
-        return;
+      Deck? deckToSend = widget.deck;
+      
+      if (deckToSend == null) {
+        final userId = SupabaseService.currentUser?.id ?? 'guest';
+        final decks = await DatabaseHelper.instance.getDecks(userId);
+        if (decks.isEmpty) {
+          _showSnackBar('Aucun deck à envoyer');
+          return;
+        }
+        // Pour l'exemple on prend le premier si aucun n'est passé
+        final deckMap = decks.first;
+        // On pourrait convertir deckMap en Deck ici si besoin, 
+        // mais on a besoin des flashcards surtout.
       }
 
-      final deck = decks.first;
-      final flashcards = await DatabaseHelper.instance.getFlashcards(deck['uuid']);
+      if (deckToSend == null) return;
+
+      final flashcards = await DatabaseHelper.instance.getFlashcards(deckToSend.uuid);
       
       final payload = jsonEncode({
         'type': 'KALAN_DECK',
-        'deck': deck,
+        'deck': {
+          'uuid': deckToSend.uuid,
+          'title': deckToSend.title,
+          'subject': deckToSend.subject,
+          'level': deckToSend.level,
+        },
         'flashcards': flashcards,
       });
 
@@ -83,7 +101,7 @@ class _ShareScreenState extends State<ShareScreen> {
         for (var char in service.characteristics) {
           if (char.properties.write) {
             await char.write(utf8.encode(payload));
-            _showSnackBar('Deck envoyé avec succès !');
+            _showSnackBar('Deck "${deckToSend.title}" envoyé avec succès !');
             return;
           }
         }

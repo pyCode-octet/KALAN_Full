@@ -93,6 +93,26 @@ class SyncService {
               await SupabaseService.client.from('leaderboard_entries').upsert(payload);
               success = true;
               break;
+            case 'UPDATE_USER':
+              final uuid = payload['uuid'];
+              final Map<String, dynamic> updateData = Map.from(payload)..remove('uuid');
+              await SupabaseService.client.from('users').update(updateData).eq('uuid', uuid);
+              await db.update('users', {'sync_status': 'synced'}, 
+                  where: 'uuid = ?', whereArgs: [uuid]);
+              success = true;
+              break;
+            case 'UPDATE_USER_POINTS':
+              final uuid = payload['uuid'];
+              final int points = payload['points'];
+              await SupabaseService.client.from('users').update({'points': points}).eq('uuid', uuid);
+              await SupabaseService.client.from('leaderboard_entries').upsert({
+                'user_id': uuid,
+                'points': points,
+                'last_updated': DateTime.now().toIso8601String(),
+                'scope': 'national',
+              });
+              success = true;
+              break;
             case 'UNLOCK_BADGE':
               await SupabaseService.client.from('user_badges').insert(payload);
               success = true;

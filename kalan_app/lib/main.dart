@@ -21,15 +21,25 @@ import 'package:kalan_app/presentation/blocs/leaderboard/leaderboard_bloc.dart';
 import 'package:kalan_app/data/repositories/leaderboard_repository_impl.dart';
 import 'package:kalan_app/services/sync_service.dart';
 import 'package:kalan_app/presentation/screens/home_screen.dart';
-import 'package:kalan_app/presentation/screens/login_screen.dart';
+import 'package:kalan_app/presentation/screens/welcome_carousel_screen.dart';
 import 'package:kalan_app/services/connectivity_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  String supabaseUrl = const String.fromEnvironment('SUPABASE_URL');
+  String supabaseKey = const String.fromEnvironment('SUPABASE_ANON_KEY');
+
+  if (supabaseUrl.isEmpty) {
+    supabaseUrl = 'https://cxljiqtrdadlaayvrmik.supabase.co';
+  }
+  if (supabaseKey.isEmpty) {
+    supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN4bGppcXRyZGFkbGFheXZybWlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MjU1NjIsImV4cCI6MjA5NDIwMTU2Mn0.RhrIiLK2qRek1w4ExMo8DVchz4ghHK6svXZGZZlO0Lw';
+  }
+
   await SupabaseService.initialize(
-    url: const String.fromEnvironment('SUPABASE_URL'),
-    anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY'),
+    url: supabaseUrl,
+    anonKey: supabaseKey,
   );
 
   // Initialize Local AI - Gemma will auto-initialize on first use
@@ -67,7 +77,7 @@ void main() async {
             create: (_) => FlashcardBloc(flashcardRepo),
           ),
           BlocProvider<QuizBloc>(
-            create: (_) => QuizBloc(quizRepo),
+            create: (_) => QuizBloc(quizRepo, userRepo),
           ),
           BlocProvider<UserBloc>(
             create: (_) => UserBloc(userRepo),
@@ -116,7 +126,7 @@ class AuthWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SupabaseService.currentUser == null
-        ? const LoginScreen()
+        ? const WelcomeCarouselScreen()
         : const HomeScreen();
   }
 }

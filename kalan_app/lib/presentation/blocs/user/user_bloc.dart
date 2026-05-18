@@ -50,5 +50,14 @@ class UserBloc extends Bloc<UserEvent, UserState> {
         emit(UserError(e.toString()));
       }
     });
+
+    on<AddPoints>((event, emit) async {
+      try {
+        await _repository.addPoints(event.points);
+        add(LoadUserProfile());
+      } catch (e) {
+        emit(UserError(e.toString()));
+      }
+    });
   }
 }

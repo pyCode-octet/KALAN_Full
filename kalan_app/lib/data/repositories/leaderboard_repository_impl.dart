@@ -16,40 +16,66 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
   @override
   Future<List<LeaderboardEntry>> getLeaderboard({String scope = 'national'}) async {
     final db = await _dbHelper.database;
+    final currentUser = SupabaseService.currentUser;
+    String? mySchool;
+    String? myClass;
+
+    if (currentUser != null) {
+      final userMaps = await db.query('users', where: 'uuid = ?', whereArgs: [currentUser.id], limit: 1);
+      if (userMaps.isNotEmpty) {
+        mySchool = userMaps.first['school_name'] as String?;
+        myClass = userMaps.first['class_name'] as String?;
+      }
+    }
 
     if (await _connectivity.isOnline()) {
       try {
-        // En vrai projet, on ferait une vue ou une jointure pour avoir le pseudo
-        // Ici on suppose que le pseudo est dans les metadata ou une table profile
-        final response = await SupabaseService.client
-            .from('leaderboard_entries')
-            .select('*, users:user_id(pseudo, avatar_url)') // Supposant une jointure possible
-            .eq('scope', scope)
+        var query = SupabaseService.client
+            .from('users')
+            .select('uuid, pseudo, avatar_url, points, school_name, class_name');
+
+        if (scope == 'school') {
+          query = query.eq('school_name', mySchool ?? 'Non définie');
+        } else if (scope == 'class') {
+          query = query.eq('class_name', myClass ?? 'Non définie');
+        }
+
+        final response = await query
             .order('points', ascending: false)
             .limit(50);
 
         final List<LeaderboardEntry> entries = [];
+        int index = 1;
+        
+        // Supprimer l'ancien cache local pour ce scope spécifique pour éviter le mélange
+        await db.delete('leaderboard_entries', where: 'scope = ?', whereArgs: [scope]);
+
         for (var item in (response as List)) {
-          final pseudo = item['users']?['pseudo'] ?? 'Anonyme';
-          final avatar = item['users']?['avatar_url'];
-          
-          final model = LeaderboardEntryModel.fromSupabaseJson(item);
-          entries.add(LeaderboardEntry(
-            userId: model.userId,
+          final userId = item['uuid'] as String;
+          final pseudo = item['pseudo'] as String? ?? 'Anonyme';
+          final points = item['points'] as int? ?? 0;
+          final avatar = item['avatar_url'] as String?;
+
+          final entry = LeaderboardEntry(
+            userId: userId,
             pseudo: pseudo,
-            points: model.points,
-            position: model.position,
-            scope: model.scope,
-            lastUpdated: model.lastUpdated,
+            points: points,
+            position: index++,
+            scope: scope,
+            lastUpdated: DateTime.now(),
             avatar: avatar,
-          ));
+          );
+          
+          entries.add(entry);
           
           // Cache local
           await db.insert('leaderboard_entries', {
-            'user_id': model.userId,
-            'points': model.points,
-            'scope': model.scope,
-            'last_updated': model.lastUpdated.toIso8601String(),
+            'user_id': userId,
+            'points': points,
+            'scope': scope,
+            'pseudo': pseudo,
+            'avatar': avatar,
+            'last_updated': DateTime.now().toIso8601String(),
           }, conflictAlgorithm: ConflictAlgorithm.replace);
         }
         return entries;
@@ -62,16 +88,16 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
     final maps = await db.query('leaderboard_entries', 
         where: 'scope = ?', whereArgs: [scope], orderBy: 'points DESC');
     
+    int index = 1;
     return maps.map((m) {
-      final model = LeaderboardEntryModel.fromMap(m);
       return LeaderboardEntry(
-        userId: model.userId,
-        pseudo: model.pseudo, // Sera 'Anonyme' si pas stocké localement
-        points: model.points,
-        position: model.position,
-        scope: model.scope,
-        lastUpdated: model.lastUpdated,
-        avatar: model.avatar,
+        userId: m['user_id'] as String,
+        pseudo: m['pseudo'] as String? ?? 'Anonyme',
+        points: m['points'] as int? ?? 0,
+        position: index++,
+        scope: m['scope'] as String? ?? scope,
+        lastUpdated: DateTime.parse(m['last_updated'] as String? ?? DateTime.now().toIso8601String()),
+        avatar: m['avatar'] as String?,
       );
     }).toList();
   }

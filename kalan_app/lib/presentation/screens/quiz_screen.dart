@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/constants/app_colors.dart';
@@ -8,8 +9,9 @@ import '../blocs/flashcard/flashcard_state.dart';
 import '../blocs/quiz/quiz_bloc.dart';
 import '../blocs/quiz/quiz_event.dart';
 import '../blocs/quiz/quiz_state.dart';
+import '../blocs/user/user_bloc.dart';
+import '../blocs/user/user_event.dart';
 import 'quiz_result_screen.dart';
-import 'dart:math';
 
 class QuizScreen extends StatefulWidget {
   final String? deckUuid;
@@ -23,9 +25,16 @@ class QuizScreen extends StatefulWidget {
 class _QuizScreenState extends State<QuizScreen> {
   int _currentQuestionIndex = 0;
   int _score = 0;
+  int _totalCorrect = 0;
+  int _totalAnswered = 0;
   final DateTime _startTime = DateTime.now();
   List<Map<String, dynamic>> _quizQuestions = [];
   bool _isLoading = true;
+  
+  Timer? _timer;
+  int _secondsRemaining = 15;
+  int? _selectedIndex;
+  bool _isAnswered = false;
 
   @override
   void initState() {
@@ -33,6 +42,55 @@ class _QuizScreenState extends State<QuizScreen> {
     if (widget.deckUuid != null) {
       context.read<FlashcardBloc>().add(LoadFlashcards(widget.deckUuid!));
     }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    setState(() {
+      _secondsRemaining = 15;
+      _isAnswered = false;
+      _selectedIndex = null;
+    });
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_secondsRemaining > 0) {
+        setState(() {
+          _secondsRemaining--;
+        });
+      } else {
+        _handleTimeout();
+      }
+    });
+  }
+
+  void _handleTimeout() {
+    _timer?.cancel();
+    // On déplace la question à la fin
+    setState(() {
+      final currentQuestion = _quizQuestions.removeAt(_currentQuestionIndex);
+      _quizQuestions.add(currentQuestion);
+      // On ne change pas l'index car la question suivante prend la place de l'actuelle
+      // Sauf si on était à la dernière, l'index reste le même mais pointe sur la nouvelle dernière
+      if (_currentQuestionIndex >= _quizQuestions.length) {
+        _currentQuestionIndex = 0;
+      }
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Temps écoulé ! On y réfléchira plus tard.'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted) _startTimer();
+    });
   }
 
   void _generateQuiz(List<Flashcard> cards) {
@@ -44,15 +102,13 @@ class _QuizScreenState extends State<QuizScreen> {
       final card = cards[i];
       final List<String> options = [card.answer];
       
-      // Add distractors from other cards
       final otherAnswers = cards.where((c) => c.uuid != card.uuid).map((c) => c.answer).toList();
       otherAnswers.shuffle();
       
       options.addAll(otherAnswers.take(3));
 
-      // If we don't have enough distractors, add generic ones
       while (options.length < 4) {
-        options.add('Réponse bidon ${options.length}');
+        options.add('Réponse ${options.length + 1}');
       }
 
       options.shuffle();
@@ -61,6 +117,7 @@ class _QuizScreenState extends State<QuizScreen> {
         'q': card.question,
         'options': options,
         'a': options.indexOf(card.answer),
+        'original_card_uuid': card.uuid,
       });
     }
 
@@ -68,6 +125,10 @@ class _QuizScreenState extends State<QuizScreen> {
       _quizQuestions = questions;
       _isLoading = false;
     });
+    
+    if (questions.isNotEmpty) {
+      _startTimer();
+    }
   }
 
   @override
@@ -84,12 +145,14 @@ class _QuizScreenState extends State<QuizScreen> {
       child: BlocListener<QuizBloc, QuizState>(
         listener: (context, state) {
           if (state is QuizSubmitted) {
+            context.read<UserBloc>().add(LoadUserProfile());
+            
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
                 builder: (_) => QuizResultScreen(
-                  score: _score, 
-                  total: _quizQuestions.length,
+                  score: _totalCorrect, 
+                  total: _totalAnswered, // On utilise le total répondu (peut être différent si timeout)
                   deckUuid: widget.deckUuid,
                   deckTitle: widget.deckTitle,
                 ),
@@ -98,16 +161,14 @@ class _QuizScreenState extends State<QuizScreen> {
           }
         },
         child: Scaffold(
-          backgroundColor: AppColors.background,
-          appBar: AppBar(
-            title: Text(widget.deckTitle),
-            leading: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+          backgroundColor: const Color(0xFFF5F2EA),
+          body: SafeArea(
+            child: _isLoading 
+              ? const Center(child: CircularProgressIndicator())
+              : _quizQuestions.isEmpty
+                ? _buildEmptyState()
+                : _buildQuizBody(),
           ),
-          body: _isLoading 
-            ? const Center(child: CircularProgressIndicator())
-            : _quizQuestions.isEmpty
-              ? _buildEmptyState()
-              : _buildQuizBody(),
         ),
       ),
     );
@@ -118,8 +179,8 @@ class _QuizScreenState extends State<QuizScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.quiz_outlined, size: 64, color: Colors.grey),
-          SizedBox(height: 16),
+          const Icon(Icons.quiz_outlined, size: 64, color: Colors.grey),
+          const SizedBox(height: 16),
           const Text('Pas assez de flashcards pour un quiz'),
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Retour')),
         ],
@@ -127,47 +188,205 @@ class _QuizScreenState extends State<QuizScreen> {
     );
   }
 
+  Widget _buildCustomTopBar(String subject) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Close button
+        GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: const BoxDecoration(
+              color: Color(0xFFE8E4DA),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.close,
+              color: Color(0xFF555555),
+              size: 20,
+            ),
+          ),
+        ),
+        // Subject Title
+        Expanded(
+          child: Center(
+            child: Text(
+              subject,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1A1A1A),
+                fontFamily: 'Plus Jakarta Sans',
+              ),
+            ),
+          ),
+        ),
+        // Timer
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            SizedBox(
+              width: 32,
+              height: 32,
+              child: CircularProgressIndicator(
+                value: _secondsRemaining / 15,
+                strokeWidth: 2,
+                backgroundColor: const Color(0xFFE8E4DA),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  _secondsRemaining < 5 ? Colors.red : const Color(0xFF2D6A2D),
+                ),
+              ),
+            ),
+            Text(
+              '$_secondsRemaining',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: _secondsRemaining < 5 ? Colors.red : const Color(0xFF2D6A2D),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildQuizBody() {
     final question = _quizQuestions[_currentQuestionIndex];
 
     return Padding(
-      padding: EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       child: Column(
         children: [
+          _buildCustomTopBar(widget.deckTitle),
+          const SizedBox(height: 16),
           LinearProgressIndicator(
-            value: (_currentQuestionIndex + 1) / _quizQuestions.length,
-            minHeight: 8,
-            backgroundColor: Colors.white,
-            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+            value: _totalAnswered / _quizQuestions.length,
+            minHeight: 6,
+            backgroundColor: const Color(0xFFE8E4DA),
+            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2D6A2D)),
+            borderRadius: BorderRadius.circular(4),
           ),
-          SizedBox(height: 40),
+          const SizedBox(height: 32),
           Text(
-            'Question ${_currentQuestionIndex + 1}/${_quizQuestions.length}',
-            style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+            'Question ${_totalAnswered + 1} sur ${_quizQuestions.length}',
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Plus Jakarta Sans',
+              fontSize: 13,
+            ),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
             question['q'],
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1A1A1A),
+              fontFamily: 'Plus Jakarta Sans',
+              height: 1.4,
+            ),
           ),
-          SizedBox(height: 40),
+          const SizedBox(height: 32),
           Expanded(
             child: ListView.builder(
               itemCount: question['options'].length,
               itemBuilder: (context, index) {
+                String letter = ['A', 'B', 'C', 'D'][index];
+                bool isCorrect = index == question['a'];
+                bool isSelected = index == _selectedIndex;
+                
+                Color bgOption = Colors.white;
+                BorderSide borderSide = const BorderSide(color: Color(0xFFE8E4DA), width: 1);
+                Color letterBg = const Color(0xFFF4F2EB);
+                Color letterTextCol = const Color(0xFF555555);
+                Color optionTextCol = const Color(0xFF1A1A1A);
+                Widget? rightIcon;
+
+                if (_isAnswered) {
+                  if (isCorrect) {
+                    bgOption = const Color(0xFFEAF3DE);
+                    borderSide = const BorderSide(color: Color(0xFFB7D98C), width: 1.5);
+                    letterBg = const Color(0xFF2D6A2D);
+                    letterTextCol = Colors.white;
+                    optionTextCol = const Color(0xFF27500A);
+                    rightIcon = const Icon(Icons.check, color: Color(0xFF2D6A2D), size: 16);
+                  } else if (isSelected) {
+                    bgOption = const Color(0xFFFCEBEB);
+                    borderSide = const BorderSide(color: Color(0xFFF3A9A9), width: 1.5);
+                    letterBg = const Color(0xFFC92A2A);
+                    letterTextCol = Colors.white;
+                    optionTextCol = const Color(0xFF7D1C1C);
+                    rightIcon = const Icon(Icons.close, color: Color(0xFFC92A2A), size: 16);
+                  }
+                }
+
                 return Padding(
-                  padding: EdgeInsets.only(bottom: 16),
-                  child: ElevatedButton(
-                    onPressed: () => _answerQuestion(index),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: AppColors.onBackground,
-                      side: BorderSide(color: Colors.grey.shade200),
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      elevation: 0,
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: GestureDetector(
+                    onTap: _isAnswered ? null : () => _answerQuestion(index),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: bgOption,
+                        border: Border.fromBorderSide(borderSide),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          if (!_isAnswered)
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.01),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            )
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              color: letterBg,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                letter,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: letterTextCol,
+                                  fontFamily: 'Plus Jakarta Sans',
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Text(
+                              question['options'][index],
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: optionTextCol,
+                                fontFamily: 'Plus Jakarta Sans',
+                              ),
+                            ),
+                          ),
+                          if (rightIcon != null) ...[
+                            const SizedBox(width: 8),
+                            rightIcon,
+                          ]
+                        ],
+                      ),
                     ),
-                    child: Text(question['options'][index]),
                   ),
                 );
               },
@@ -179,20 +398,47 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   void _answerQuestion(int index) {
-    if (index == _quizQuestions[_currentQuestionIndex]['a']) {
-      _score++;
+    if (_isAnswered) return;
+    
+    _timer?.cancel();
+    setState(() {
+      _isAnswered = true;
+      _selectedIndex = index;
+      _totalAnswered++;
+    });
+
+    final isCorrect = index == _quizQuestions[_currentQuestionIndex]['a'];
+    
+    if (isCorrect) {
+      _totalCorrect++;
+      context.read<UserBloc>().add(const AddPoints(10));
+    } else {
+      context.read<UserBloc>().add(const AddPoints(-5));
     }
 
-    if (_currentQuestionIndex < _quizQuestions.length - 1) {
-      setState(() => _currentQuestionIndex++);
-    } else {
-      final duration = DateTime.now().difference(_startTime).inSeconds;
-      context.read<QuizBloc>().add(SubmitQuiz(
-        deckId: widget.deckUuid,
-        score: _score,
-        total: _quizQuestions.length,
-        duration: duration,
-      ));
-    }
+    Future.delayed(const Duration(seconds: 2), () {
+      if (!mounted) return;
+      
+      if (_totalAnswered < _quizQuestions.length) {
+        setState(() {
+          _currentQuestionIndex++;
+          _isAnswered = false;
+          _selectedIndex = null;
+          // Si on a enlevé des éléments et réindexé, on s'assure de ne pas déborder
+          if (_currentQuestionIndex >= _quizQuestions.length) {
+            _currentQuestionIndex = 0;
+          }
+        });
+        _startTimer();
+      } else {
+        final duration = DateTime.now().difference(_startTime).inSeconds;
+        context.read<QuizBloc>().add(SubmitQuiz(
+          deckId: widget.deckUuid,
+          score: _totalCorrect,
+          total: _quizQuestions.length,
+          duration: duration,
+        ));
+      }
+    });
   }
 }

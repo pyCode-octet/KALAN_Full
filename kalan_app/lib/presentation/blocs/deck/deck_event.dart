@@ -14,9 +14,11 @@ class CreateDeck extends DeckEvent {
   final String title;
   final String subject;
   final String? level;
-  const CreateDeck(this.title, this.subject, this.level);
+  final List<Map<String, String>>? cards;
+  final String? uuid;
+  const CreateDeck(this.title, this.subject, this.level, {this.cards, this.uuid});
   @override
-  List<Object?> get props => [title, subject, level];
+  List<Object?> get props => [title, subject, level, cards, uuid];
 }
 
 class DeleteDeck extends DeckEvent {

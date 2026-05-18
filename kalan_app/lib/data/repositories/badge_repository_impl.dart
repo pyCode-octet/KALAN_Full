@@ -56,6 +56,11 @@ class BadgeRepositoryImpl implements BadgeRepository {
   }
 
   @override
+  Future<List<Map<String, dynamic>>> getAllBadges() async {
+    return await _dbHelper.getAllBadges();
+  }
+
+  @override
   Future<void> unlockBadge(String badgeKey) async {
     final db = await _dbHelper.database;
     final user = SupabaseService.currentUser;

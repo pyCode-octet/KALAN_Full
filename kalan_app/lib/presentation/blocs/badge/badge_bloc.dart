@@ -10,8 +10,9 @@ class BadgeBloc extends Bloc<BadgeEvent, BadgeState> {
     on<LoadBadges>((event, emit) async {
       emit(BadgeLoading());
       try {
-        final badges = await _repository.getUserBadges();
-        emit(BadgeLoaded(badges));
+        final unlocked = await _repository.getUserBadges();
+        final all = await _repository.getAllBadges();
+        emit(BadgeLoaded(unlocked, all));
       } catch (e) {
         emit(BadgeError(e.toString()));
       }

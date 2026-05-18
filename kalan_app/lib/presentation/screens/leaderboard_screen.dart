@@ -16,6 +16,16 @@ class LeaderboardScreen extends StatefulWidget {
 class _LeaderboardScreenState extends State<LeaderboardScreen> {
   String _currentScope = 'national';
 
+  ImageProvider _getAvatarImage(String? avatar) {
+    if (avatar == null || avatar.isEmpty) {
+      return const AssetImage('assets/avatars/avatar1.png');
+    }
+    if (avatar.startsWith('assets/')) {
+      return AssetImage(avatar);
+    }
+    return NetworkImage(avatar);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -120,7 +130,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         CircleAvatar(
           radius: size / 2, 
           backgroundColor: AppColors.secondary,
-          backgroundImage: avatar != null ? NetworkImage(avatar) as ImageProvider : const AssetImage('assets/avatars/avatar1.png'),
+          backgroundImage: _getAvatarImage(avatar),
         ),
         SizedBox(height: 8),
         Text(name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
@@ -161,7 +171,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               CircleAvatar(
                 radius: 20, 
                 backgroundColor: AppColors.secondary,
-                backgroundImage: entry.avatar != null ? NetworkImage(entry.avatar) as ImageProvider : const AssetImage('assets/avatars/avatar1.png'),
+                backgroundImage: _getAvatarImage(entry.avatar),
               ),
               SizedBox(width: 12),
               Text(isMe ? 'Moi (${entry.pseudo})' : entry.pseudo, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),

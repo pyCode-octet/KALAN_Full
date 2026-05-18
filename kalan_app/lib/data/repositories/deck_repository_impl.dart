@@ -19,29 +19,24 @@ class DeckRepositoryImpl implements DeckRepository {
   Future<List<Deck>> getDecks() async {
     final db = await _dbHelper.database;
     
-    // 1. Récupère d'abord les decks locaux
-    final localMaps = await db.query('decks', orderBy: 'created_at DESC');
-    final localDecks = localMaps.map((m) => DeckModel.fromMap(m)).toList();
+    // 1. Récupère d'abord les decks locaux avec leurs compteurs
+    final localMaps = await db.rawQuery('''
+      SELECT d.*, 
+             (SELECT COUNT(*) FROM flashcards WHERE deck_id = d.uuid) as cardCount,
+             (SELECT COUNT(*) FROM flashcards WHERE deck_id = d.uuid AND difficulty >= 2) as masteredCount
+      FROM decks d
+      ORDER BY d.created_at DESC
+    ''');
     
-    final Map<String, DeckModel> mergedDecks = {};
-    for (var deck in localDecks) {
-      mergedDecks[deck.uuid] = deck;
+    final Map<String, Map<String, dynamic>> mergedData = {};
+    for (var m in localMaps) {
+      mergedData[m['uuid'] as String] = Map<String, dynamic>.from(m);
     }
 
     // 2. Si online, récupère de Supabase
     if (await _connectivity.isOnline()) {
       final user = SupabaseService.currentUser;
       try {
-        // Decks publics
-        final publicData = await SupabaseService.client
-            .from('decks')
-            .select()
-            .eq('is_public', true);
-        
-        final List<DeckModel> remoteDecks = (publicData as List)
-            .map((json) => DeckModel.fromSupabaseJson(json))
-            .toList();
-
         // Decks personnels
         if (user != null) {
           final personalData = await SupabaseService.client
@@ -49,37 +44,44 @@ class DeckRepositoryImpl implements DeckRepository {
               .select()
               .eq('user_id', user.id);
           
-          remoteDecks.addAll((personalData as List)
-              .map((json) => DeckModel.fromSupabaseJson(json)));
-        }
-
-        // Merge sans doublons
-        for (var remoteDeck in remoteDecks) {
-          if (!mergedDecks.containsKey(remoteDeck.uuid)) {
-            mergedDecks[remoteDeck.uuid] = remoteDeck;
-            // Insérer en local avec is_synced = 1
-            await db.insert('decks', remoteDeck.toMap(), 
-                conflictAlgorithm: ConflictAlgorithm.replace);
+          for (var remoteDeck in personalData as List) {
+            final uuid = remoteDeck['uuid'] as String;
+            if (!mergedData.containsKey(uuid)) {
+              final model = DeckModel.fromSupabaseJson(remoteDeck);
+              await db.insert('decks', model.toMap(), 
+                  conflictAlgorithm: ConflictAlgorithm.replace);
+              
+              mergedData[uuid] = {
+                ...remoteDeck,
+                'cardCount': 0,
+                'masteredCount': 0,
+              };
+            }
           }
         }
-        } catch (e) {
-          // log error or handle it
-        }
+      } catch (e) {
+        // log error
+      }
     }
 
-    final sortedDecks = mergedDecks.values.toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final sortedData = mergedData.values.toList()
+      ..sort((a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String));
 
-    return sortedDecks.map((model) => Deck(
-      uuid: model.uuid,
-      title: model.title,
-      description: model.description,
-      subject: model.subject,
-      level: model.level,
-      isPublic: model.isPublic,
-      downloadCount: model.downloadCount,
-      createdAt: model.createdAt,
-    )).toList();
+    return sortedData.map((data) {
+      final model = DeckModel.fromMap(data);
+      return Deck(
+        uuid: model.uuid,
+        title: model.title,
+        description: model.description,
+        subject: model.subject,
+        level: model.level,
+        isPublic: model.isPublic,
+        downloadCount: model.downloadCount,
+        createdAt: model.createdAt,
+        cardCount: data['cardCount'] ?? 0,
+        masteredCount: data['masteredCount'] ?? 0,
+      );
+    }).toList();
   }
 
   @override
@@ -93,33 +95,34 @@ class DeckRepositoryImpl implements DeckRepository {
           .eq('is_public', true)
           .order('download_count', ascending: false);
       
-      final List<DeckModel> remoteDecks = (publicData as List)
-          .map((json) => DeckModel.fromSupabaseJson(json))
-          .toList();
-
-      return remoteDecks.map((model) => Deck(
-        uuid: model.uuid,
-        title: model.title,
-        description: model.description,
-        subject: model.subject,
-        level: model.level,
-        isPublic: model.isPublic,
-        downloadCount: model.downloadCount,
-        createdAt: model.createdAt,
-      )).toList();
+      return (publicData as List).map((json) {
+        final model = DeckModel.fromSupabaseJson(json);
+        return Deck(
+          uuid: model.uuid,
+          title: model.title,
+          description: model.description,
+          subject: model.subject,
+          level: model.level,
+          isPublic: model.isPublic,
+          downloadCount: model.downloadCount,
+          createdAt: model.createdAt,
+          cardCount: 0, // Compte inconnu pour les decks publics distants sans fetch additionnel
+          masteredCount: 0,
+        );
+      }).toList();
     } catch (e) {
       return [];
     }
   }
 
   @override
-  Future<void> createDeck(String title, String subject, String? level) async {
+  Future<void> createDeck(String title, String subject, String? level, {List<Map<String, String>>? cards, String? uuid}) async {
     final db = await _dbHelper.database;
     final user = SupabaseService.currentUser;
-    final String uuid = _uuid.v4();
+    final String deckUuid = uuid ?? _uuid.v4();
     
     final model = DeckModel(
-      uuid: uuid,
+      uuid: deckUuid,
       userId: user?.id ?? 'guest',
       title: title,
       subject: subject,
@@ -128,14 +131,46 @@ class DeckRepositoryImpl implements DeckRepository {
       isSynced: false,
     );
 
-    // 1. Insère IMMÉDIATEMENT dans SQLite
+    // 1. Insère le deck
     await db.insert('decks', model.toMap());
 
-    // 2. Sync Supabase si online
+    // 2. Insère les cartes si présentes
+    if (cards != null && cards.isNotEmpty) {
+      for (var card in cards) {
+        final cardUuid = _uuid.v4();
+        await db.insert('flashcards', {
+          'uuid': cardUuid,
+          'deck_id': deckUuid,
+          'question': card['question'],
+          'answer': card['answer'],
+          'difficulty': 0,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+
+        // Sync carte si online
+        if (await _connectivity.isOnline() && user != null) {
+          try {
+            await SupabaseService.client.from('flashcards').insert({
+              'uuid': cardUuid,
+              'deck_id': deckUuid,
+              'question': card['question'],
+              'answer': card['answer'],
+              'difficulty': 0,
+            });
+          } catch (e) {
+            await _addToSyncQueue('CREATE_FLASHCARD', {'uuid': cardUuid, 'deck_id': deckUuid, 'question': card['question'], 'answer': card['answer']});
+          }
+        } else {
+          await _addToSyncQueue('CREATE_FLASHCARD', {'uuid': cardUuid, 'deck_id': deckUuid, 'question': card['question'], 'answer': card['answer']});
+        }
+      }
+    }
+
+    // 3. Sync Deck Supabase si online
     if (await _connectivity.isOnline() && user != null) {
       try {
         await SupabaseService.client.from('decks').insert(model.toSupabaseJson());
-        await db.update('decks', {'is_synced': 1}, where: 'uuid = ?', whereArgs: [uuid]);
+        await db.update('decks', {'is_synced': 1}, where: 'uuid = ?', whereArgs: [deckUuid]);
       } catch (e) {
         await _addToSyncQueue('CREATE_DECK', model.toSupabaseJson());
       }

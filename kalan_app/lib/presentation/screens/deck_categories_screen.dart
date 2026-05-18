@@ -107,7 +107,7 @@ class _DeckCategoriesScreenState extends State<DeckCategoriesScreen> {
     return InkWell(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const DeckListScreen()),
+        MaterialPageRoute(builder: (_) => DeckListScreen(filterSubject: cat['name'])),
       ),
       child: Container(
         decoration: BoxDecoration(

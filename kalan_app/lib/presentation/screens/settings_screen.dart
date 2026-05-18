@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:kalan_app/presentation/blocs/sync/sync_bloc.dart';
 import 'package:kalan_app/presentation/blocs/sync/sync_event.dart';
+import 'package:kalan_app/presentation/blocs/user/user_bloc.dart';
+import 'package:kalan_app/presentation/blocs/user/user_event.dart';
 import 'package:kalan_app/presentation/screens/login_screen.dart';
 import 'package:kalan_app/data/local/database_helper.dart';
 import '../../core/constants/app_colors.dart';
@@ -227,16 +229,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
             ElevatedButton(
-              onPressed: () async {
+              onPressed: () {
                 final newPseudo = pseudoController.text.trim();
                 if (newPseudo.isEmpty) return;
-                await db.update('users', {'pseudo': newPseudo, 'avatar_id': selectedAvatar});
-                if (ctx.mounted) Navigator.pop(ctx);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Profil mis a jour !')),
-                  );
-                }
+                
+                context.read<UserBloc>().add(UpdateUserProfile(
+                  pseudo: newPseudo,
+                  avatarId: selectedAvatar,
+                ));
+
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Profil mis à jour ✓'), backgroundColor: Color(0xFF2D6A2D)),
+                );
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
               child: const Text('Sauvegarder', style: TextStyle(color: Colors.white)),

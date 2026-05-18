@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import 'package:kalan_app/data/local/database_helper.dart';
 import 'package:kalan_app/data/models/user_model.dart';
 import 'package:kalan_app/data/remote/supabase_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../widgets/kalan_button.dart';
 import 'home_screen.dart';
@@ -52,13 +53,13 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     'C\'est avec ce pseudo que tu seras reconnu(e) par les autres élèves.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF8A7A58),
+                      color: Colors.grey[600],
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -74,13 +75,13 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     'C\'est l\'image qui te représentera dans KALAN.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF8A7A58),
+                      color: Colors.grey[600],
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -162,11 +163,11 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _buildStep(1, 'Infos', true, done: true),
+        // _buildStep(1, 'Infos', true, done: true),
+        // _buildLine(),
+        _buildStep(1, 'Pseudo', true),
         _buildLine(),
-        _buildStep(2, 'Pseudo', true),
-        _buildLine(),
-        _buildStep(3, 'Avatar', false),
+        _buildStep(2, 'Avatar', false),
       ],
     );
   }
@@ -178,7 +179,7 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: active ? AppColors.primary : const Color(0xFFEDE7DB),
+            color: active ? AppColors.primary : Colors.grey[200],
             shape: BoxShape.circle,
           ),
           alignment: Alignment.center,
@@ -196,10 +197,10 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
         const SizedBox(height: 8),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF6A5A38),
+            color: Colors.grey[600],
           ),
         ),
       ],
@@ -211,7 +212,7 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
       width: 40,
       height: 2,
       margin: const EdgeInsets.only(bottom: 22, left: 4, right: 4),
-      color: const Color(0xFFD8CFBF),
+      color: Colors.grey[300],
     );
   }
 
@@ -222,16 +223,16 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFD8CFBA), width: 2),
+        border: Border.all(color: Colors.grey[300]!, width: 2),
       ),
       child: TextField(
         controller: _pseudoController,
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: Color(0xFFC0B080), fontWeight: FontWeight.w600),
+          hintStyle: TextStyle(color: Colors.grey[400], fontWeight: FontWeight.w600),
           border: InputBorder.none,
         ),
-        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF3A2810)),
+        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.black87),
       ),
     );
   }
@@ -257,7 +258,7 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: isSelected ? AppColors.primary : const Color(0xFFD8CFBA),
+                    color: isSelected ? AppColors.primary : Colors.grey[300]!,
                     width: isSelected ? 3 : 2.5,
                   ),
                   boxShadow: isSelected
@@ -282,7 +283,7 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
                     decoration: BoxDecoration(
                       color: AppColors.primary,
                       shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFF5EDD8), width: 2),
+                      border: Border.all(color: Colors.white, width: 2),
                     ),
                     alignment: Alignment.center,
                     child: const Icon(Icons.check, color: Colors.white, size: 12),
@@ -307,54 +308,66 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
     setState(() => _isLoading = true);
     try {
       // 1. Gérer l'école (school_id)
-      final schoolName = widget.registrationData['school_name'] as String;
+      final schoolName = widget.registrationData['school_name'] as String? ?? '';
       int? schoolId;
       
-      try {
-        final existingSchool = await SupabaseService.client
-            .from('schools')
-            .select('id')
-            .eq('name', schoolName)
-            .maybeSingle();
-        
-        if (existingSchool != null) {
-          schoolId = existingSchool['id'] as int;
-        } else {
-          final newSchool = await SupabaseService.client
+      /*
+      if (schoolName.isNotEmpty) {
+        try {
+          final existingSchool = await SupabaseService.client
               .from('schools')
-              .insert({'name': schoolName})
               .select('id')
-              .single();
-          schoolId = newSchool['id'] as int;
+              .eq('name', schoolName)
+              .maybeSingle();
+          
+          if (existingSchool != null) {
+            schoolId = existingSchool['id'] as int;
+          } else {
+            final newSchool = await SupabaseService.client
+                .from('schools')
+                .insert({'name': schoolName})
+                .select('id')
+                .single();
+            schoolId = newSchool['id'] as int;
+          }
+        } catch (e) {
+          debugPrint('Erreur gestion ecole: $e');
+          // Mode hors-ligne : on continue sans school_id
         }
-      } catch (e) {
-        debugPrint('Erreur gestion ecole: $e');
-        // Mode hors-ligne : on continue sans school_id
       }
+      */
 
       // 2. Générer UUID local
       final uuid = const Uuid().v4();
 
       // 3. Récupérer le nom de la classe
-      final classId = widget.registrationData['class_id'] as int;
+      final classId = widget.registrationData['class_id'] as int?;
       String? className;
-      try {
-        final classData = await SupabaseService.client
-            .from('classes')
-            .select('name')
-            .eq('id', classId)
-            .single();
-        className = classData['name'] as String;
-      } catch (e) {
-        className = 'Inconnue';
+      /*
+      if (classId != null) {
+        try {
+          final classData = await SupabaseService.client
+              .from('classes')
+              .select('name')
+              .eq('id', classId)
+              .single();
+          className = classData['name'] as String;
+        } catch (e) {
+          className = 'Inconnue';
+        }
+      } else {
+        className = 'Non définie';
       }
+      */
+      className = 'Non définie';
 
       final userModel = UserModel(
         uuid: uuid,
         pseudo: pseudo,
-        firstName: widget.registrationData['first_name'],
-        lastName: widget.registrationData['last_name'],
+        firstName: widget.registrationData['first_name'] ?? '',
+        lastName: widget.registrationData['last_name'] ?? '',
         schoolId: schoolId,
+        schoolName: schoolName.isNotEmpty ? schoolName : null,
         classId: classId,
         className: className,
         avatarId: _selectedAvatar,
@@ -366,6 +379,10 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
       final dbHelper = DatabaseHelper.instance;
       final db = await dbHelper.database;
       await db.insert('users', userModel.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+
+      // Enregistrer l'ID de l'utilisateur actif
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('current_user_uuid', uuid);
 
       // 5. Sauvegarde Supabase (Profil utilisateur)
       try {

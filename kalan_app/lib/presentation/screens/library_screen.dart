@@ -9,6 +9,7 @@ import '../../domain/entities/deck.dart';
 import '../../data/local/database_helper.dart';
 import 'deck_list_screen.dart';
 import 'create_deck_screen.dart';
+import 'flashcard_study_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -23,6 +24,32 @@ class _LibraryScreenState extends State<LibraryScreen> {
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
 
+  void _confirmDelete(BuildContext context, Deck deck) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Supprimer cette fiche ?'),
+        content: Text('Es-tu sûr de vouloir supprimer "${deck.title}" ? Cette action libérera de l\'espace sur ton appareil.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () {
+              context.read<DeckBloc>().add(DeleteDeck(deck.uuid));
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Fiche supprimée ✓'), duration: Duration(seconds: 2)),
+              );
+            },
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -36,7 +63,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         textTheme: GoogleFonts.plusJakartaSansTextTheme(Theme.of(context).textTheme),
       ),
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F2EA),
+        backgroundColor: Colors.white,
         body: SafeArea(
           child: Column(
             children: [
@@ -154,7 +181,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 itemCount: subjectsWithDecks.length,
                 itemBuilder: (context, index) {
                   final subject = subjectsWithDecks[index];
-                  final subjectDecks = filteredDecks.where((d) => d.subject == subject['label']).cast<Deck>().toList();
+                  final subjectDecks = filteredDecks.where((d) => d.subject == subject['label']).toList();
                   
                   return _buildCategorySection(subject, subjectDecks);
                 },
@@ -220,16 +247,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
-  Widget _buildDeckCard(Map<String, dynamic> deck, Color color) {
-    final totalCards = deck['cardCount'] ?? 0;
-    final masteredCards = deck['masteredCount'] ?? 0;
+  Widget _buildDeckCard(Deck deck, Color color) {
+    final totalCards = deck.cardCount;
+    final masteredCards = deck.masteredCount;
     final masteryPercentage = totalCards > 0 ? (masteredCards / totalCards * 100).round() : 0;
     final masteryColor = masteryPercentage < 50 ? const Color(0xFFE07B39) : color;
 
     return GestureDetector(
-      onTap: () {
-        // Navigation vers le détail du deck
-      },
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => FlashcardStudyScreen(deckTitle: deck.title, deckUuid: deck.uuid))),
+      onLongPress: () => _confirmDelete(context, deck),
       child: Container(
         width: 155,
         padding: const EdgeInsets.all(14),
@@ -248,14 +274,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ),
             const Spacer(),
             Text(
-              deck['title'],
+              deck.title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A)),
             ),
             const SizedBox(height: 4),
             Text(
-              '${deck['level'] ?? 'Niveau'} · $totalCards cartes',
+              '${deck.level ?? 'Niveau'} · $totalCards cartes',
               style: const TextStyle(fontSize: 11, color: Color(0xFF888888)),
             ),
             const SizedBox(height: 10),

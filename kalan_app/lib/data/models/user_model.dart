@@ -5,6 +5,7 @@ class UserModel {
   final String? firstName;
   final String? lastName;
   final int? schoolId;
+  final String? schoolName;
   final int? classId;
   final String? className;
   final String language;
@@ -23,6 +24,7 @@ class UserModel {
     this.firstName,
     this.lastName,
     this.schoolId,
+    this.schoolName,
     this.classId,
     this.className,
     this.language = 'fr',
@@ -39,11 +41,12 @@ class UserModel {
         id: map['id'],
         uuid: map['uuid'],
         pseudo: map['pseudo'],
-        firstName: map['firstName'],
-        lastName: map['lastName'],
+        firstName: map['first_name'] ?? map['firstName'],
+        lastName: map['last_name'] ?? map['lastName'],
         schoolId: map['school_id'],
+        schoolName: map['school_name'],
         classId: map['class_id'],
-        className: map['class'],
+        className: map['class_name'] ?? map['class'],
         language: map['language'] ?? 'fr',
         points: map['points'] ?? 0,
         level: map['level'] ?? 1,
@@ -58,11 +61,12 @@ class UserModel {
         'id': id,
         'uuid': uuid,
         'pseudo': pseudo,
-        'firstName': firstName,
-        'lastName': lastName,
+        'first_name': firstName,
+        'last_name': lastName,
         'school_id': schoolId,
+        'school_name': schoolName,
         'class_id': classId,
-        'class': className,
+        'class_name': className,
         'language': language,
         'points': points,
         'level': level,
@@ -79,7 +83,9 @@ class UserModel {
         'first_name': firstName,
         'last_name': lastName,
         'school_id': schoolId,
+        'school_name': schoolName,
         'class_id': classId,
+        'class_name': className,
         'language': language,
         'points': points,
         'level': level,

@@ -1,14 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import 'package:kalan_app/presentation/blocs/deck/deck_bloc.dart';
 import 'package:kalan_app/presentation/blocs/deck/deck_event.dart';
-import 'package:kalan_app/presentation/blocs/user/user_bloc.dart';
-import 'package:kalan_app/presentation/blocs/user/user_state.dart';
+import 'package:kalan_app/presentation/screens/flashcard_study_screen.dart';
 import '../../core/constants/app_colors.dart';
 import '../../data/local/database_helper.dart';
 import '../../services/local_ai_service.dart';
-import 'flashcard_study_screen.dart';
 
 class GeneratingScreen extends StatefulWidget {
   final String ocrText;
@@ -18,21 +17,58 @@ class GeneratingScreen extends StatefulWidget {
   State<GeneratingScreen> createState() => _GeneratingScreenState();
 }
 
-class _GeneratingScreenState extends State<GeneratingScreen> {
+class _GeneratingScreenState extends State<GeneratingScreen> with TickerProviderStateMixin {
   final LocalAIService _aiService = LocalAIService();
   List<Map<String, String>> _flashcards = [];
-  bool _isGenerating = true;
-  final TextEditingController _titleController = TextEditingController();
-  String _selectedSubject = 'SVT';
+  String _selectedSubject = 'Mathématiques';
   String _selectedLevel = '3ème';
-  bool _isPublic = false;
-  List<String> _subjectNames = ['SVT', 'Mathématiques', 'Physique-Chimie', 'Histoire-Géo', 'Anglais', 'Français'];
+  List<String> _subjectNames = ['Mathématiques', 'SVT', 'Physique-Chimie', 'Histoire-Géo', 'Anglais', 'Français'];
+
+  late AnimationController _rotationController;
+  late AnimationController _pulseController;
+  int _currentStep = 0;
+  Timer? _stepTimer;
+  bool _aiFinished = false;
+  final Uuid _uuid = const Uuid();
 
   @override
   void initState() {
     super.initState();
+    _rotationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    )..repeat();
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+
+    // Progression visuelle des étapes
+    _stepTimer = Timer.periodic(const Duration(milliseconds: 1500), (timer) {
+      if (!mounted) return;
+      setState(() {
+        if (_currentStep < 3) {
+          _currentStep++;
+        } else {
+          _stepTimer?.cancel();
+          if (_aiFinished) {
+            _autoSaveAndRedirect();
+          }
+        }
+      });
+    });
+
     _generate();
     _loadSubjects();
+  }
+
+  @override
+  void dispose() {
+    _rotationController.dispose();
+    _pulseController.dispose();
+    _stepTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadSubjects() async {
@@ -41,7 +77,7 @@ class _GeneratingScreenState extends State<GeneratingScreen> {
       setState(() {
         _subjectNames = subjects.map((s) => s['label'] as String).toList();
         if (!_subjectNames.contains(_selectedSubject)) {
-          _selectedSubject = _subjectNames.first;
+          _selectedSubject = _subjectNames.contains('Mathématiques') ? 'Mathématiques' : _subjectNames.first;
         }
       });
     }
@@ -52,57 +88,56 @@ class _GeneratingScreenState extends State<GeneratingScreen> {
       text: widget.ocrText,
       subject: _selectedSubject,
       level: _selectedLevel,
-      count: 5,
     );
     if (mounted) {
       setState(() {
         _flashcards = results;
-        _isGenerating = false;
-        if (widget.ocrText.isNotEmpty) {
-          _titleController.text = widget.ocrText.split('\n').first;
-          if (_titleController.text.length > 50) {
-            _titleController.text = _titleController.text.substring(0, 50);
-          }
+        _aiFinished = true;
+        
+        // Si les étapes visuelles sont déjà finies, on redirige
+        if (_currentStep >= 3) {
+          _autoSaveAndRedirect();
         }
       });
     }
   }
 
-  Future<void> _saveDeck() async {
-    final userState = context.read<UserBloc>().state;
-    if (userState is! UserLoaded) return;
-
-    final userId = userState.profile['uuid'];
-    final deckUuid = const Uuid().v4();
-
-    final db = await DatabaseHelper.instance.database;
-    await db.insert('decks', {
-      'uuid': deckUuid,
-      'user_id': userId,
-      'title': _titleController.text.isEmpty ? 'Nouveau Deck' : _titleController.text,
-      'subject': _selectedSubject,
-      'level': _selectedLevel,
-      'is_public': _isPublic ? 1 : 0,
-      'created_at': DateTime.now().toIso8601String(),
-    });
-
-    for (var card in _flashcards) {
-      await db.insert('flashcards', {
-        'uuid': const Uuid().v4(),
-        'deck_id': deckUuid,
-        'question': card['question'],
-        'answer': card['answer'],
-        'created_at': DateTime.now().toIso8601String(),
-      });
+  Future<void> _autoSaveAndRedirect() async {
+    if (_flashcards.isEmpty) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Désolé, l'IA n'a pas pu générer de fiches pour ce contenu."))
+        );
+      }
+      return;
     }
 
+    // Titre automatique basé sur le début du texte
+    String title = 'Nouveau Deck';
+    if (widget.ocrText.isNotEmpty) {
+      title = widget.ocrText.split('\n').first.trim();
+      if (title.length > 35) title = '${title.substring(0, 35)}...';
+    }
+
+    final String deckUuid = _uuid.v4();
+
+    // Sauvegarde automatique via le Bloc
+    context.read<DeckBloc>().add(CreateDeck(
+      title,
+      _selectedSubject,
+      _selectedLevel,
+      cards: _flashcards,
+      uuid: deckUuid,
+    ));
+
+    // Redirection immédiate
     if (mounted) {
-      context.read<DeckBloc>().add(const LoadDecks());
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => FlashcardStudyScreen(
-            deckTitle: _titleController.text,
+            deckTitle: title,
             deckUuid: deckUuid,
           ),
         ),
@@ -112,179 +147,152 @@ class _GeneratingScreenState extends State<GeneratingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isGenerating) {
-      return _buildLoadingState();
-    }
-
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Confirmer le Deck'),
-        backgroundColor: Colors.white,
-        foregroundColor: AppColors.onBackground,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: const Color(0xFFFDFCF8),
+      body: SafeArea(
+        child: Stack(
           children: [
-            _buildDeckInfoSection(),
-            SizedBox(height: 24),
-            Text('Flashcards générées (${_flashcards.length})', 
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            SizedBox(height: 12),
-            _buildFlashcardsList(),
-            SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _saveDeck,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: Text('Sauvegarder le Deck', style: TextStyle(fontSize: 16, color: Colors.white)),
+            // Icônes de fond
+            Positioned(top: 50, left: 40, child: Opacity(opacity: 0.1, child: Text('🌿', style: TextStyle(fontSize: 48)))),
+            Positioned(top: 120, right: 50, child: Opacity(opacity: 0.1, child: Text('🌍', style: TextStyle(fontSize: 40)))),
+            Positioned(bottom: 150, left: 60, child: Opacity(opacity: 0.1, child: Text('📐', style: TextStyle(fontSize: 44)))),
+            Positioned(bottom: 80, right: 70, child: Opacity(opacity: 0.1, child: Text('🧪', style: TextStyle(fontSize: 48)))),
+            
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
+                children: [
+                  const SizedBox(height: 48),
+                  const Text(
+                    'Génération en cours...',
+                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: AppColors.primary, fontFamily: 'Plus Jakarta Sans'),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    "L'IA KALAN transforme ton cours en succès",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w500),
+                  ),
+                  
+                  // Loader
+                  Expanded(
+                    child: Center(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          RotationTransition(
+                            turns: _rotationController,
+                            child: SizedBox(
+                              width: 170,
+                              height: 170,
+                              child: CustomPaint(painter: DashedCirclePainter(color: AppColors.primary.withOpacity(0.4))),
+                            ),
+                          ),
+                          ScaleTransition(
+                            scale: Tween<double>(begin: 0.96, end: 1.04).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut)),
+                            child: Container(
+                              width: 110, height: 110,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.08), blurRadius: 20, spreadRadius: 8, offset: const Offset(0, 4))],
+                                border: Border.all(color: AppColors.primary.withOpacity(0.15), width: 1),
+                              ),
+                              child: Center(
+                                child: ClipOval(
+                                  child: Image.asset(
+                                    'assets/images/kalan_logo.png', width: 70, height: 70, fit: BoxFit.contain,
+                                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.forest, color: AppColors.primary, size: 54),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  // Étapes
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 15, offset: const Offset(0, 5))]),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildStepItem(0, "Analyse du texte (OCR)"),
+                        const SizedBox(height: 12),
+                        _buildStepItem(1, "Extraction des idées clés"),
+                        const SizedBox(height: 12),
+                        _buildStepItem(2, "Création des flashcards"),
+                        const SizedBox(height: 12),
+                        _buildStepItem(3, "Lancement de l'étude"),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 32),
+                      child: Text('ANNULER LA GÉNÉRATION', style: TextStyle(color: Colors.grey.shade400, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                    ),
+                  ),
+                ],
               ),
             ),
-            SizedBox(height: 40),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLoadingState() {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildCulturalLoader(),
-              SizedBox(height: 32),
-              Text(
-                'KALAN réfléchit...',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 16),
-              Text(
-                'Génération des flashcards en cours...',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: Colors.grey),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _buildStepItem(int stepIndex, String title) {
+    bool isCompleted = _currentStep > stepIndex;
+    bool isActive = _currentStep == stepIndex;
+    Color textColor = isCompleted ? Colors.grey.shade700 : isActive ? AppColors.primary : Colors.grey.shade400;
+    FontWeight textWeight = isActive || isCompleted ? FontWeight.bold : FontWeight.normal;
+    double opacity = isActive || isCompleted ? 1.0 : 0.3;
 
-  Widget _buildCulturalLoader() {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: const Duration(seconds: 10),
-      builder: (context, value, child) {
-        IconData icon = Icons.eco;
-        if (value > 0.8) icon = Icons.forest;
-        return Container(
-          width: 100, height: 100,
-          decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
-          child: Icon(icon, color: AppColors.primary, size: 50 * (0.5 + value * 0.5)),
-        );
-      },
-    );
-  }
-
-  Widget _buildDeckInfoSection() {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-      child: Column(
+    return Opacity(
+      opacity: opacity,
+      child: Row(
         children: [
-          TextField(
-            controller: _titleController,
-            decoration: const InputDecoration(labelText: 'Titre du Deck', border: OutlineInputBorder()),
-          ),
-          SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: _selectedSubject,
-                  decoration: const InputDecoration(labelText: 'Matière', border: OutlineInputBorder()),
-                  items: _subjectNames
-                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _selectedSubject = v!),
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  value: _selectedLevel,
-                  decoration: const InputDecoration(labelText: 'Niveau', border: OutlineInputBorder()),
-                  items: ['6ème', '5ème', '4ème', '3ème', '2nde', '1ère', 'Terminale', 'Autre']
-                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _selectedLevel = v!),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
-          SwitchListTile(
-            title: const Text('Rendre ce deck public'),
-            value: _isPublic,
-            onChanged: (v) => setState(() => _isPublic = v),
-            activeColor: AppColors.primary,
-          ),
+          if (isCompleted)
+            Container(width: 22, height: 22, decoration: const BoxDecoration(color: Color(0xFF2E7D32), shape: BoxShape.circle), child: const Center(child: Icon(Icons.check, color: Colors.white, size: 13)))
+          else if (isActive)
+            Container(
+              width: 22, height: 22,
+              decoration: BoxDecoration(color: const Color(0xFFEAF3DE), shape: BoxShape.circle, border: Border.all(color: AppColors.primary, width: 1.5)),
+              child: Center(child: Container(width: 7, height: 7, decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle))),
+            )
+          else
+            Container(width: 22, height: 22, decoration: BoxDecoration(color: Colors.grey.shade100, shape: BoxShape.circle, border: Border.all(color: Colors.grey.shade300, width: 1))),
+          const SizedBox(width: 16),
+          Expanded(child: Text(title, style: TextStyle(fontSize: 14, color: textColor, fontWeight: textWeight, fontFamily: 'Plus Jakarta Sans'))),
         ],
       ),
     );
   }
+}
 
-  Widget _buildFlashcardsList() {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _flashcards.length,
-      itemBuilder: (context, index) {
-        return Container(
-          margin: EdgeInsets.only(bottom: 12),
-          padding: EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Flashcard #${index + 1}', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                    onPressed: () => setState(() => _flashcards.removeAt(index)),
-                  ),
-                ],
-              ),
-              TextField(
-                decoration: const InputDecoration(labelText: 'Question'),
-                controller: TextEditingController(text: _flashcards[index]['question']),
-                onChanged: (v) => _flashcards[index]['question'] = v,
-              ),
-              SizedBox(height: 12),
-              TextField(
-                decoration: const InputDecoration(labelText: 'Réponse'),
-                controller: TextEditingController(text: _flashcards[index]['answer']),
-                onChanged: (v) => _flashcards[index]['answer'] = v,
-              ),
-            ],
-          ),
-        );
-      },
-    );
+class DashedCirclePainter extends CustomPainter {
+  final Color color;
+  DashedCirclePainter({required this.color});
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double width = size.width;
+    final double radius = width / 2;
+    final Paint paint = Paint()..color = color..strokeWidth = 2.5..style = PaintingStyle.stroke;
+    final double circumference = 2 * 3.14159 * radius;
+    final double dashWidth = 8, dashSpace = 8;
+    final int dashCount = (circumference / (dashWidth + dashSpace)).floor();
+    for (int i = 0; i < dashCount; i++) {
+      final double startAngle = (i * (dashWidth + dashSpace) / circumference) * 2 * 3.14159;
+      final double sweepAngle = (dashWidth / circumference) * 2 * 3.14159;
+      canvas.drawArc(Rect.fromCircle(center: Offset(width / 2, size.height / 2), radius: radius), startAngle, sweepAngle, false, paint);
+    }
   }
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

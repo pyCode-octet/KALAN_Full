@@ -11,9 +11,10 @@ class BadgeInitial extends BadgeState {}
 class BadgeLoading extends BadgeState {}
 class BadgeLoaded extends BadgeState {
   final List<UserBadge> unlockedBadges;
-  const BadgeLoaded(this.unlockedBadges);
+  final List<Map<String, dynamic>> allBadges;
+  const BadgeLoaded(this.unlockedBadges, this.allBadges);
   @override
-  List<Object?> get props => [unlockedBadges];
+  List<Object?> get props => [unlockedBadges, allBadges];
 }
 class BadgeError extends BadgeState {
   final String message;

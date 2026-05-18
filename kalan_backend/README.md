@@ -102,12 +102,15 @@ PRIMARY KEY (user_id, badge_id)
 
 ---
 
-## Setup
+## Setup & Schema
+
+Le schéma complet et les scripts de création se trouvent dans le fichier :
+👉 [database_schema.sql](file:///c:/Users/angen/Documents/kalan/kalan_backend/database_schema.sql)
 
 1. Créer projet sur https://supabase.com
 2. Project Settings → API → copier URL + anon key
-3. SQL Editor → créer les tables ci-dessus
-4. Activer RLS (Row Level Security) sur toutes les tables
+3. SQL Editor → Copier le contenu de `database_schema.sql` et l'exécuter.
+4. Activer RLS (Row Level Security) sur toutes les tables.
 ```sql
 -- Exemple RLS
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;

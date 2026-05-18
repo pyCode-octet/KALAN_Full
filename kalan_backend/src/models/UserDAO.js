@@ -34,25 +34,29 @@ class UserDAO {
     }
     
     static async create({ firstName, lastName, pseudo, school_id, class_id }) {
+        /*
         if (!firstName || firstName.length < 2) {
             throw new Error('Le prénom doit contenir au moins 2 caractères');
         }
         if (!lastName || lastName.length < 2) {
             throw new Error('Le nom doit contenir au moins 2 caractères');
         }
+        */
         if (!pseudo || pseudo.length < 2) {
             throw new Error('Le pseudo doit contenir au moins 2 caractères');
         }
+        /*
         if (!school_id || !class_id) {
             throw new Error('L\'école et la classe sont obligatoires');
         }
+        */
         
         const uuid = uuidv4();
         
         const result = await run(
             `INSERT INTO users (uuid, firstName, lastName, pseudo, school_id, class_id)
              VALUES (?, ?, ?, ?, ?, ?)`,
-            [uuid, firstName, lastName, pseudo, school_id, class_id]
+            [uuid, firstName || '', lastName || '', pseudo, school_id || null, class_id || null]
         );
         
         return this.findById(result.lastID);

@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../../core/constants/app_colors.dart';
 import '../../core/utils/level_utils.dart';
 import '../blocs/user/user_bloc.dart';
 import '../blocs/user/user_state.dart';
 import 'flashcard_study_screen.dart';
 import 'deck_list_screen.dart';
-import 'profile_screen.dart';
 import 'badges_screen.dart';
+import 'notification_screen.dart';
 import '../../data/local/database_helper.dart';
 
 class HomeDashboard extends StatelessWidget {
@@ -22,7 +21,7 @@ class HomeDashboard extends StatelessWidget {
         textTheme: GoogleFonts.plusJakartaSansTextTheme(Theme.of(context).textTheme),
       ),
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F2EA),
+        backgroundColor: Colors.white,
         body: BlocBuilder<UserBloc, UserState>(
           builder: (context, state) {
             if (state is UserLoading) return const Center(child: CircularProgressIndicator());
@@ -84,8 +83,9 @@ class HomeDashboard extends StatelessWidget {
                 children: [
                   IconButton(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Aucune nouvelle notification'), duration: Duration(seconds: 1)),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const NotificationScreen()),
                       );
                     },
                     icon: const Icon(Icons.notifications_none_rounded, size: 26, color: Color(0xFF1A1A1A)),

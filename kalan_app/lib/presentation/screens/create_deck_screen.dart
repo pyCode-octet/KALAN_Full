@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../blocs/deck/deck_bloc.dart'
+import '../blocs/deck/deck_bloc.dart';
 import '../blocs/deck/deck_event.dart';
 import '../../data/local/database_helper.dart';
-import '../../ai/gemma_service.dart';
+import '../../services/local_ai_service.dart';
 import '../../ai/model_downloader.dart';
 import 'model_download_screen.dart';
 
@@ -25,7 +25,7 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
   List<Map<String, String>> _generatedCards = [];
 
   final List<String> _levels = ['6ème', '5ème', '4ème', '3ème', '2nde', '1ère', 'Terminale'];
-  final GemmaService _gemmaService = GemmaService();
+  final LocalAIService _aiService = LocalAIService();
 
   @override
   void initState() {
@@ -51,7 +51,7 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
     setState(() => _isGenerating = true);
 
     try {
-      final cards = await _gemmaService.generateFlashcards(
+      final cards = await _aiService.generateFlashcards(
         text: _contentController.text.trim(),
         subject: _selectedSubject,
         level: _selectedLevel,
@@ -75,7 +75,7 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
         textTheme: GoogleFonts.plusJakartaSansTextTheme(Theme.of(context).textTheme),
       ),
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F2EA),
+        backgroundColor: Colors.white,
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
@@ -297,6 +297,7 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
               _titleController.text.trim(),
               _selectedSubject,
               _selectedLevel,
+              cards: _generatedCards,
             ));
             // Ici on devrait aussi sauvegarder les cartes générées, 
             // mais DeckBloc CreateDeck ne prend que le deck pour l'instant.
@@ -319,7 +320,7 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
 
   @override
   void dispose() {
-    _gemmaService.unloadModel();
+    _aiService.unloadModel();
     super.dispose();
   }
 }

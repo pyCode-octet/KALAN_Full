@@ -8,7 +8,7 @@ class AppTheme {
 
   static ThemeData _buildTheme(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
-    final bg = AppColors.background; // Toujours beige comme le HTML
+    final bg = AppColors.background; // Fond global blanc
     final surf = AppColors.surface; // Toujours blanc
     final onBg = AppColors.onBackground; // Toujours sombre pour la lisibilité
 

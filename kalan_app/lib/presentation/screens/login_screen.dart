@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:kalan_app/data/local/database_helper.dart';
-import 'package:kalan_app/data/models/user_model.dart';
 import '../../core/constants/app_colors.dart';
 import '../widgets/kalan_button.dart';
 import 'home_screen.dart';
-import 'onboarding_info_screen.dart';
+import 'onboarding_pseudo_screen.dart';
+
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -144,7 +145,16 @@ class _LoginScreenState extends State<LoginScreen> {
       onPressed: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const OnboardingInfoScreen()),
+          MaterialPageRoute(
+            builder: (_) => const OnboardingPseudoScreen(
+              registrationData: {
+                'first_name': '',
+                'last_name': '',
+                'school_name': '',
+                'class_id': null,
+              },
+            ),
+          ),
         );
       },
       child: Text(
@@ -171,6 +181,10 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final userMap = await DatabaseHelper.instance.getUserByPseudo(pseudo);
       if (userMap != null) {
+        // Enregistrer l'ID de l'utilisateur actif
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('current_user_uuid', userMap['uuid']);
+
         if (mounted) {
           Navigator.pushReplacement(
             context,

@@ -89,13 +89,13 @@ class _OnboardingInfoScreenState extends State<OnboardingInfoScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     'Ces informations nous aideront à mieux personnaliser ton expérience.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF8A7A58),
+                      color: Colors.grey[600],
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -107,6 +107,33 @@ class _OnboardingInfoScreenState extends State<OnboardingInfoScreen> {
                   KalanButton(
                     text: 'Suivant',
                     onPressed: _handleNext,
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const OnboardingPseudoScreen(
+                            registrationData: {
+                              'first_name': '',
+                              'last_name': '',
+                              'school_name': '',
+                              'class_id': null,
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    child: Text(
+                      'Remplir plus tard ➔',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 25),
                 ],
@@ -193,7 +220,7 @@ class _OnboardingInfoScreenState extends State<OnboardingInfoScreen> {
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: active ? AppColors.primary : const Color(0xFFEDE7DB),
+            color: active ? AppColors.primary : Colors.grey[200],
             shape: BoxShape.circle,
           ),
           alignment: Alignment.center,
@@ -209,10 +236,10 @@ class _OnboardingInfoScreenState extends State<OnboardingInfoScreen> {
         const SizedBox(height: 8),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF6A5A38),
+            color: Colors.grey[600],
           ),
         ),
       ],
@@ -224,7 +251,7 @@ class _OnboardingInfoScreenState extends State<OnboardingInfoScreen> {
       width: 40,
       height: 2,
       margin: const EdgeInsets.only(bottom: 22, left: 4, right: 4),
-      color: const Color(0xFFD8CFBF),
+      color: Colors.grey[300],
     );
   }
 
@@ -235,16 +262,16 @@ class _OnboardingInfoScreenState extends State<OnboardingInfoScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFD8CFBA), width: 2),
+        border: Border.all(color: Colors.grey[300]!, width: 2),
       ),
       child: TextField(
         controller: controller,
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: Color(0xFFC0B080), fontWeight: FontWeight.w600),
+          hintStyle: TextStyle(color: Colors.grey[400], fontWeight: FontWeight.w600),
           border: InputBorder.none,
         ),
-        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF3A2810)),
+        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.black87),
       ),
     );
   }
@@ -256,20 +283,20 @@ class _OnboardingInfoScreenState extends State<OnboardingInfoScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFD8CFBA), width: 2),
+        border: Border.all(color: Colors.grey[300]!, width: 2),
       ),
       child: DropdownButtonFormField<int>(
         value: _selectedClassId,
         hint: Text(
           _isLoadingClasses ? 'Chargement...' : 'Ta classe',
-          style: const TextStyle(color: Color(0xFFC0B080), fontWeight: FontWeight.w600, fontSize: 15),
+          style: TextStyle(color: Colors.grey[400], fontWeight: FontWeight.w600, fontSize: 15),
         ),
         items: _classes.map((cls) {
           return DropdownMenuItem<int>(
             value: cls['id'],
             child: Text(
               cls['name'],
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF3A2810)),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.black87),
             ),
           );
         }).toList(),

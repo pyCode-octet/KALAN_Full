@@ -7,6 +7,8 @@ class Deck {
   final bool isPublic;
   final int downloadCount;
   final DateTime createdAt;
+  final int cardCount;
+  final int masteredCount;
 
   Deck({
     required this.uuid,
@@ -17,5 +19,7 @@ class Deck {
     this.isPublic = false,
     this.downloadCount = 0,
     required this.createdAt,
+    this.cardCount = 0,
+    this.masteredCount = 0,
   });
 }

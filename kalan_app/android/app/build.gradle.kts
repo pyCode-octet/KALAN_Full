@@ -38,11 +38,9 @@ android {
         }
     }
 
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
-        }
-    }
+    // externalNativeBuild removed to avoid compiling llama.cpp when using flutter_gemma plugin.
+    // If you later need the native build, re-enable the `externalNativeBuild` block and
+    // ensure the native sources are correct and intended to be compiled.
 }
 
 flutter {

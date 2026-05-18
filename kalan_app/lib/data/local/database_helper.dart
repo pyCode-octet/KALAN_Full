@@ -9,13 +9,38 @@ class DatabaseHelper {
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDB('kalan.db');
+    await _ensureTablesAndSeed(_database!);
     return _database!;
   }
 
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+    return await openDatabase(
+      path,
+      version: 3,
+      onCreate: _createDB,
+      onUpgrade: _upgradeDB,
+    );
+  }
+
+  Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      try {
+        await db.execute('ALTER TABLE leaderboard_entries ADD COLUMN pseudo TEXT');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE leaderboard_entries ADD COLUMN avatar TEXT');
+      } catch (_) {}
+    }
+    if (oldVersion < 3) {
+      try {
+        await db.execute('ALTER TABLE users ADD COLUMN school_id INTEGER');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE users ADD COLUMN class_id INTEGER');
+      } catch (_) {}
+    }
   }
 
   Future _createDB(Database db, int version) async {
@@ -26,7 +51,9 @@ class DatabaseHelper {
         pseudo TEXT NOT NULL,
         first_name TEXT,
         last_name TEXT,
+        school_id INTEGER,
         school_name TEXT,
+        class_id INTEGER,
         class_name TEXT,
         language TEXT DEFAULT 'fr',
         points INTEGER DEFAULT 0,
@@ -62,6 +89,7 @@ class DatabaseHelper {
         level TEXT,
         is_public INTEGER DEFAULT 0,
         download_count INTEGER DEFAULT 0,
+        is_synced INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     ''');
@@ -75,6 +103,7 @@ class DatabaseHelper {
         answer TEXT NOT NULL,
         difficulty INTEGER DEFAULT 0,
         next_review DATETIME,
+        is_synced INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     ''');
@@ -99,6 +128,8 @@ class DatabaseHelper {
         points INTEGER NOT NULL DEFAULT 0,
         position INTEGER,
         scope TEXT DEFAULT 'national',
+        pseudo TEXT,
+        avatar TEXT,
         last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(user_id, scope)
       )
@@ -133,6 +164,18 @@ class DatabaseHelper {
         image_path TEXT,
         color INTEGER NOT NULL,
         emoji TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS sync_queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        action TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        retry_count INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     ''');
 
@@ -295,6 +338,26 @@ class DatabaseHelper {
   Future<void> _ensureTablesAndSeed(Database db) async {
     await db.execute('CREATE TABLE IF NOT EXISTS subjects (id TEXT PRIMARY KEY, label TEXT NOT NULL, color INTEGER NOT NULL, bg_color INTEGER NOT NULL, icon_code INTEGER NOT NULL)');
     await db.execute('CREATE TABLE IF NOT EXISTS badges (id TEXT PRIMARY KEY, label TEXT NOT NULL, description TEXT, category TEXT, image_path TEXT, color INTEGER NOT NULL, emoji TEXT NOT NULL)');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS sync_queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        action TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        retry_count INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+    
+    // Dynamic database patch migrations
+    try {
+      await db.execute('ALTER TABLE decks ADD COLUMN is_synced INTEGER DEFAULT 0');
+    } catch (_) {}
+    try {
+      await db.execute('ALTER TABLE flashcards ADD COLUMN is_synced INTEGER DEFAULT 0');
+    } catch (_) {}
+
     await _seedDefaultData(db);
   }
 

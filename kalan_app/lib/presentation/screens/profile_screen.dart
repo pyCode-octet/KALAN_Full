@@ -56,7 +56,7 @@ class ProfileScreen extends StatelessWidget {
                           _buildIdentity(context, profile, levelInfo, points),
                           _buildStatsGrid(stats, profile),
                           _buildBadgesSection(context, badges),
-                          _buildPersonalInfoSection(context, profile),
+                          // _buildPersonalInfoSection(context, profile),
                           _buildSettingsSection(context),
                           _buildLogoutButton(context),
                           const SizedBox(height: 40),
@@ -451,7 +451,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 32),
                 InkWell(
-                  onTap: () async {
+                  onTap: () {
                     if (pseudoController.text.trim().isEmpty || pseudoController.text.trim().length < 3) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Pseudo obligatoire (min 3 caractères)'), backgroundColor: Colors.red),
@@ -459,60 +459,23 @@ class ProfileScreen extends StatelessWidget {
                       return;
                     }
 
-                    final userData = {
-                      'pseudo': pseudoController.text.trim(),
-                      'first_name': firstNameController.text.trim(),
-                      'last_name': lastNameController.text.trim(),
-                      'school_name': schoolController.text.trim(),
-                      'class_name': selectedClass,
-                      'updated_at': DateTime.now().toIso8601String(),
-                      'sync_status': 'pending',
-                    };
+                    // Dispatch Bloc Event
+                    context.read<UserBloc>().add(UpdateUserProfile(
+                      pseudo: pseudoController.text.trim(),
+                      firstName: firstNameController.text.trim(),
+                      lastName: lastNameController.text.trim(),
+                      school: schoolController.text.trim(),
+                      className: selectedClass,
+                    ));
 
-                    // 1. SAUVEGARDE SQLITE (TOUJOURS)
-                    await DatabaseHelper.instance.updateUser(userData);
-
-                    // 2. ESSAYER SYNC SUPABASE (si online)
-                    try {
-                      final connectivity = await Connectivity().checkConnectivity();
-                      if (connectivity.any((r) => r != ConnectivityResult.none)) {
-                        final userUuid = Supabase.instance.client.auth.currentUser?.id;
-                        if (userUuid != null) {
-                          await Supabase.instance.client
-                            .from('users')
-                            .update({
-                              'pseudo': userData['pseudo'],
-                              'first_name': userData['first_name'],
-                              'last_name': userData['last_name'],
-                              'school_name': userData['school_name'],
-                              'class_name': userData['class_name'],
-                              'updated_at': userData['updated_at'],
-                            })
-                            .eq('uuid', userUuid);
-                          
-                          // Marquer comme sync
-                          await DatabaseHelper.instance.updateUser({
-                            ...userData,
-                            'sync_status': 'synced',
-                          });
-                        }
-                      }
-                    } catch (e) {
-                      debugPrint('Sync différée: $e');
-                    }
-
-                    // 3. RAFRAÎCHIR ET NOTIFIER
-                    if (context.mounted) {
-                      context.read<UserBloc>().add(LoadUserProfile());
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Infos sauvegardées localement ✓'),
-                          backgroundColor: Color(0xFF2E7D32),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    }
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Infos sauvegardées ✓'),
+                        backgroundColor: Color(0xFF2E7D32),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
                   },
                   child: Container(
                     width: double.infinity,

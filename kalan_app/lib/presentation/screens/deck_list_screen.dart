@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:kalan_app/presentation/blocs/sync/sync_bloc.dart';
-import 'package:kalan_app/presentation/blocs/sync/sync_state.dart';
 import 'package:kalan_app/presentation/screens/settings_screen.dart';
 import '../../core/constants/app_colors.dart';
 import '../blocs/deck/deck_bloc.dart';
@@ -12,10 +10,11 @@ import '../widgets/loading_shimmer.dart';
 import 'flashcard_study_screen.dart';
 import 'share_screen.dart';
 import 'create_deck_screen.dart';
-import '../../data/local/database_helper.dart';
+import '../../domain/entities/deck.dart';
 
 class DeckListScreen extends StatelessWidget {
-  const DeckListScreen({super.key});
+  final String? filterSubject;
+  const DeckListScreen({super.key, this.filterSubject});
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +28,7 @@ class DeckListScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Mes Decks'),
+        title: Text(filterSubject ?? 'Mes Decks'),
         backgroundColor: Colors.white,
         foregroundColor: AppColors.onBackground,
         actions: [
@@ -44,11 +43,15 @@ class DeckListScreen extends StatelessWidget {
           if (state is DeckLoading) return const LoadingShimmer();
           if (state is DeckError) return Center(child: Text(state.message));
           if (state is DeckLoaded) {
-            final decks = state.decks;
+            var decks = state.decks;
+            if (filterSubject != null) {
+              decks = decks.where((d) => d.subject == filterSubject).toList();
+            }
+
             if (decks.isEmpty) return const EmptyState(title: 'Aucun deck', subtitle: 'Commence par créer ton premier deck de révision !');
 
             // Group decks by subject
-            final Map<String, List<dynamic>> decksBySubject = {};
+            final Map<String, List<Deck>> decksBySubject = {};
             for (var deck in decks) {
               final subject = deck.subject ?? 'Autres';
               if (!decksBySubject.containsKey(subject)) {
@@ -58,11 +61,11 @@ class DeckListScreen extends StatelessWidget {
             }
 
             return ListView.builder(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               itemCount: decksBySubject.length,
               itemBuilder: (context, index) {
                 final subject = decksBySubject.keys.elementAt(index);
-                final decks = decksBySubject[subject]!;
+                final subjectDecks = decksBySubject[subject]!;
                 final config = subjectConfigs[subject] ?? {
                   'color': AppColors.primary,
                   'bg': AppColors.primary.withOpacity(0.1),
@@ -73,7 +76,7 @@ class DeckListScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       child: Row(
                         children: [
                           Container(
@@ -81,14 +84,14 @@ class DeckListScreen extends StatelessWidget {
                             decoration: BoxDecoration(color: config['color'], borderRadius: BorderRadius.circular(6)),
                             child: Icon(config['icon'], color: Colors.white, size: 14),
                           ),
-                          SizedBox(width: 8),
-                          Text(subject, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          const SizedBox(width: 8),
+                          Text(subject, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                           const Spacer(),
-                          Text('${decks.length} decks', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                          Text('${subjectDecks.length} decks', style: const TextStyle(color: Colors.grey, fontSize: 12)),
                         ],
                       ),
                     ),
-                    ...decks.map((deck) => _buildDeckItem(context, deck, config)).toList(),
+                    ...subjectDecks.map((deck) => _buildDeckItem(context, deck, config)).toList(),
                   ],
                 );
               },
@@ -106,7 +109,7 @@ class DeckListScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDeckItem(BuildContext context, dynamic deck, Map<String, dynamic> config) {
+  Widget _buildDeckItem(BuildContext context, Deck deck, Map<String, dynamic> config) {
     return Dismissible(
       key: Key(deck.uuid),
       direction: DismissDirection.endToStart,
@@ -118,8 +121,8 @@ class DeckListScreen extends StatelessWidget {
       ),
       onDismissed: (_) => context.read<DeckBloc>().add(DeleteDeck(deck.uuid)),
       child: Container(
-        margin: EdgeInsets.only(bottom: 10),
-        padding: EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -134,30 +137,51 @@ class DeckListScreen extends StatelessWidget {
                 decoration: BoxDecoration(color: config['bg'], borderRadius: BorderRadius.circular(12)),
                 child: Icon(config['icon'], color: config['color'], size: 24),
               ),
-              SizedBox(width: 16),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(deck.title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                    FutureBuilder<int>(
-                      future: DatabaseHelper.instance.getCardCount(deck.uuid),
-                      builder: (context, snapshot) {
-                        final count = snapshot.data ?? 0;
-                        return Text('${deck.level ?? '3ème'} · $count cartes', style: TextStyle(fontSize: 12, color: Colors.grey));
-                      },
-                    ),
+                    Text(deck.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                    Text('${deck.level ?? '3ème'} · ${deck.cardCount} cartes', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                   ],
                 ),
               ),
               IconButton(
                 icon: Icon(Icons.share_rounded, color: AppColors.secondary, size: 20),
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ShareScreen())),
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ShareScreen(deck: deck))),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 20),
+                onPressed: () => _confirmDelete(context, deck),
               ),
               const Icon(Icons.chevron_right_rounded, color: Colors.grey),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, Deck deck) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Supprimer cette fiche ?'),
+        content: Text('Es-tu sûr de vouloir supprimer "${deck.title}" ? Cette action est irréversible.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () {
+              context.read<DeckBloc>().add(DeleteDeck(deck.uuid));
+              Navigator.pop(ctx);
+            },
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }
