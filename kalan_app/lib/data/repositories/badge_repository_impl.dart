@@ -13,18 +13,27 @@ class BadgeRepositoryImpl implements BadgeRepository {
 
   BadgeRepositoryImpl(this._dbHelper, this._connectivity);
 
+  Future<String?> _getLocalUserId() async {
+    final db = await _dbHelper.database;
+    final profiles = await db.query('user_profile', limit: 1);
+    if (profiles.isNotEmpty) {
+      return profiles.first['uuid'] as String?;
+    }
+    return null;
+  }
+
   @override
   Future<List<UserBadge>> getUserBadges() async {
     final db = await _dbHelper.database;
-    final user = SupabaseService.currentUser;
-    if (user == null) return [];
+    final userId = SupabaseService.currentUser?.id ?? await _getLocalUserId();
+    if (userId == null) return [];
 
-    if (await _connectivity.isOnline()) {
+    if (await _connectivity.isOnline() && SupabaseService.currentUser != null) {
       try {
         final response = await SupabaseService.client
             .from('user_badges')
             .select()
-            .eq('user_id', user.id);
+            .eq('user_id', userId);
         
         final List<UserBadge> badges = [];
         for (var item in (response as List)) {
@@ -44,7 +53,7 @@ class BadgeRepositoryImpl implements BadgeRepository {
       }
     }
 
-    final maps = await db.query('user_badges', where: 'user_id = ?', whereArgs: [user.id]);
+    final maps = await db.query('user_badges', where: 'user_id = ?', whereArgs: [userId]);
     return maps.map((m) {
       final model = UserBadgeModel.fromMap(m);
       return UserBadge(
@@ -63,11 +72,11 @@ class BadgeRepositoryImpl implements BadgeRepository {
   @override
   Future<void> unlockBadge(String badgeKey) async {
     final db = await _dbHelper.database;
-    final user = SupabaseService.currentUser;
-    if (user == null) return;
+    final userId = SupabaseService.currentUser?.id ?? await _getLocalUserId();
+    if (userId == null) return;
 
     final model = UserBadgeModel(
-      userId: user.id,
+      userId: userId,
       badgeKey: badgeKey,
       unlockedAt: DateTime.now(),
     );
@@ -76,7 +85,7 @@ class BadgeRepositoryImpl implements BadgeRepository {
     await db.insert('user_badges', model.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
 
     // 2. Supabase
-    if (await _connectivity.isOnline()) {
+    if (await _connectivity.isOnline() && SupabaseService.currentUser != null) {
       try {
         await SupabaseService.client.from('user_badges').insert(model.toSupabaseJson());
       } catch (e) {
