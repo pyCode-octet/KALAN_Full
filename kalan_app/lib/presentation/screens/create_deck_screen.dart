@@ -3,10 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../blocs/deck/deck_bloc.dart';
 import '../blocs/deck/deck_event.dart';
-import '../../data/local/database_helper.dart';
 import '../../services/local_ai_service.dart';
-import '../../ai/model_downloader.dart';
-import 'model_download_screen.dart';
 
 class CreateDeckScreen extends StatefulWidget {
   const CreateDeckScreen({super.key});
@@ -20,11 +17,10 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
   String _selectedSubject = 'Sciences';
-  String _selectedLevel = '3ème';
+  final String _selectedLevel = 'Général';
   bool _isGenerating = false;
   List<Map<String, String>> _generatedCards = [];
 
-  final List<String> _levels = ['6ème', '5ème', '4ème', '3ème', '2nde', '1ère', 'Terminale'];
   final LocalAIService _aiService = LocalAIService();
 
   @override
@@ -43,13 +39,12 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
     setState(() => _isGenerating = true);
 
     try {
-      final cards = await _aiService.generateFlashcards(
+      final result = await _aiService.generateFlashcards(
         text: _contentController.text.trim(),
-        subject: _selectedSubject,
-        level: _selectedLevel,
       );
       setState(() {
-        _generatedCards = cards;
+        _selectedSubject = result['subject'];
+        _generatedCards = (result['flashcards'] as List).cast<Map<String, String>>();
         _isGenerating = false;
       });
     } catch (e) {
@@ -92,40 +87,7 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
                 const SizedBox(height: 8),
                 _buildTextField('Ex: Les fractions, Guerre mondiale...', _titleController),
                 const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildLabel('Matière'),
-                          const SizedBox(height: 8),
-                          FutureBuilder<List<Map<String, dynamic>>>(
-                            future: DatabaseHelper.instance.getAllSubjects(),
-                            builder: (context, snapshot) {
-                              if (!snapshot.hasData) return const SizedBox(height: 50);
-                              final subjects = snapshot.data!.map((s) => s['label'].toString()).toList();
-                              if (!subjects.contains(_selectedSubject)) _selectedSubject = subjects.first;
-                              return _buildDropdown(subjects, _selectedSubject, (val) => setState(() => _selectedSubject = val!));
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildLabel('Niveau'),
-                          const SizedBox(height: 8),
-                          _buildDropdown(_levels, _selectedLevel, (val) => setState(() => _selectedLevel = val!)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
+
                 const Divider(height: 40),
                 _buildLabel('Contenu du cours (pour l\'IA)'),
                 const SizedBox(height: 8),

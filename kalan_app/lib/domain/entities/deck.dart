@@ -9,6 +9,7 @@ class Deck {
   final DateTime createdAt;
   final int cardCount;
   final int masteredCount;
+  final int? lastQuizScore;
 
   Deck({
     required this.uuid,
@@ -21,5 +22,6 @@ class Deck {
     required this.createdAt,
     this.cardCount = 0,
     this.masteredCount = 0,
+    this.lastQuizScore,
   });
 }

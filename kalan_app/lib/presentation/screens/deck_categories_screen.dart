@@ -69,7 +69,7 @@ class _DeckCategoriesScreenState extends State<DeckCategoriesScreen> {
         : Column(
           children: [
             Padding(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               child: TextField(
                 decoration: InputDecoration(
                   hintText: 'Rechercher une matière...',
@@ -84,8 +84,8 @@ class _DeckCategoriesScreenState extends State<DeckCategoriesScreen> {
               child: _categories.isEmpty
                 ? const Center(child: Text('Aucune matière trouvée'))
                 : GridView.builder(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       crossAxisSpacing: 16,
                       mainAxisSpacing: 16,
@@ -119,14 +119,14 @@ class _DeckCategoriesScreenState extends State<DeckCategoriesScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: EdgeInsets.all(12),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(color: (cat['color'] as Color).withValues(alpha: 0.1), shape: BoxShape.circle),
               child: Icon(cat['icon'], color: cat['color'], size: 32),
             ),
-            SizedBox(height: 12),
-            Text(cat['name'], style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.onBackground), textAlign: TextAlign.center),
-            SizedBox(height: 4),
-            Text('${cat['count']} decks', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 12),
+            Text(cat['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.onBackground), textAlign: TextAlign.center),
+            const SizedBox(height: 4),
+            Text('${cat['count']} decks', style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
           ],
         ),
       ),

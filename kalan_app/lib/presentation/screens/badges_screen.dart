@@ -341,7 +341,7 @@ class _BadgesScreenState extends State<BadgesScreen> with SingleTickerProviderSt
                     'assets/badges/${badge['image_path']}',
                     width: 54,
                     height: 54,
-                    fit: BoxFit.cover,
+                    fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) => Container(
                       width: 54,
                       height: 54,

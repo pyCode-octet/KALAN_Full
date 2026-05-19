@@ -22,3 +22,19 @@ class BadgeError extends BadgeState {
   @override
   List<Object?> get props => [message];
 }
+
+/// Émis juste après qu'un badge est débloqué — déclenche le popup
+class BadgeJustUnlocked extends BadgeState {
+  final String label;
+  final String emoji;
+  final String? imagePath;
+  final int color;
+  const BadgeJustUnlocked({
+    required this.label,
+    required this.emoji,
+    this.imagePath,
+    required this.color,
+  });
+  @override
+  List<Object?> get props => [label, emoji, imagePath, color];
+}

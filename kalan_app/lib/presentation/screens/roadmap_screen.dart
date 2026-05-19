@@ -6,6 +6,7 @@ import '../../core/utils/level_utils.dart';
 import '../../data/local/database_helper.dart';
 import '../blocs/user/user_bloc.dart';
 import '../blocs/user/user_state.dart';
+import '../widgets/tree_evolution.dart';
 import 'quiz_screen.dart';
 import 'create_deck_screen.dart';
 
@@ -347,7 +348,9 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                   color: Color(0xFFEAF3DE),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.park, size: 28, color: Color(0xFF2D6A2D)),
+                child: Center(
+                  child: TreeEvolution(stage: levelInfo.level, size: 36),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -751,7 +754,7 @@ class _RoadmapNodeButtonState extends State<RoadmapNodeButton> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
-    final double size = 70.0;
+    const double size = 70.0;
     
     // Choisir les couleurs du bouton
     Color baseColor;

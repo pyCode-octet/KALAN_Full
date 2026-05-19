@@ -25,9 +25,8 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
   final LocalAIService _aiService = LocalAIService();
   List<Map<String, String>> _flashcards = [];
   String _selectedSubject = 'Littérature';
-  String _selectedLevel = '3ème';
+  final String _selectedLevel = 'Général';
   List<Map<String, dynamic>> _subjects = [];
-  final List<String> _levels = ['6ème', '5ème', '4ème', '3ème', '2nde', '1ère', 'Terminale'];
   bool _isConfiguring = true;
 
   late AnimationController _rotationController;
@@ -168,14 +167,13 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
   }
 
   Future<void> _generate() async {
-    final results = await _aiService.generateFlashcards(
+    final result = await _aiService.generateFlashcards(
       text: widget.ocrText,
-      subject: _selectedSubject,
-      level: _selectedLevel,
     );
     if (mounted) {
       setState(() {
-        _flashcards = results;
+        _selectedSubject = result['subject'];
+        _flashcards = (result['flashcards'] as List).cast<Map<String, String>>();
         _aiFinished = true;
         
         // Si les étapes visuelles sont déjà finies, on redirige
@@ -387,58 +385,6 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
                               );
                             },
                           ),
-                    const SizedBox(height: 28),
-                    
-                    // Label Niveau
-                    const Text(
-                      'NIVEAU SCOLAIRE',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF888888),
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    
-                    // Liste des niveaux
-                    SizedBox(
-                      height: 38,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _levels.length,
-                        itemBuilder: (context, index) {
-                          final lvl = _levels[index];
-                          final isSelected = _selectedLevel == lvl;
-                          
-                          return GestureDetector(
-                            onTap: () => setState(() => _selectedLevel = lvl),
-                            child: Container(
-                              margin: const EdgeInsets.only(right: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              decoration: BoxDecoration(
-                                color: isSelected ? const Color(0xFF2D6A2D) : Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: isSelected ? const Color(0xFF2D6A2D) : const Color(0xFFE0E0E0),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  lvl,
-                                  style: TextStyle(
-                                    color: isSelected ? Colors.white : const Color(0xFF666666),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -504,10 +450,10 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
         child: Stack(
           children: [
             // Icônes de fond
-            Positioned(top: 50, left: 40, child: Opacity(opacity: 0.1, child: const Text('🌿', style: TextStyle(fontSize: 48)))),
-            Positioned(top: 120, right: 50, child: Opacity(opacity: 0.1, child: const Text('🌍', style: TextStyle(fontSize: 40)))),
-            Positioned(bottom: 150, left: 60, child: Opacity(opacity: 0.1, child: const Text('📐', style: TextStyle(fontSize: 44)))),
-            Positioned(bottom: 80, right: 70, child: Opacity(opacity: 0.1, child: const Text('🧪', style: TextStyle(fontSize: 48)))),
+            const Positioned(top: 50, left: 40, child: Opacity(opacity: 0.1, child: Text('🌿', style: TextStyle(fontSize: 48)))),
+            const Positioned(top: 120, right: 50, child: Opacity(opacity: 0.1, child: Text('🌍', style: TextStyle(fontSize: 40)))),
+            const Positioned(bottom: 150, left: 60, child: Opacity(opacity: 0.1, child: Text('📐', style: TextStyle(fontSize: 44)))),
+            const Positioned(bottom: 80, right: 70, child: Opacity(opacity: 0.1, child: Text('🧪', style: TextStyle(fontSize: 48)))),
             
             SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -642,7 +588,7 @@ class DashedCirclePainter extends CustomPainter {
     final double radius = width / 2;
     final Paint paint = Paint()..color = color..strokeWidth = 2.5..style = PaintingStyle.stroke;
     final double circumference = 2 * 3.14159 * radius;
-    final double dashWidth = 8, dashSpace = 8;
+    const double dashWidth = 8, dashSpace = 8;
     final int dashCount = (circumference / (dashWidth + dashSpace)).floor();
     for (int i = 0; i < dashCount; i++) {
       final double startAngle = (i * (dashWidth + dashSpace) / circumference) * 2 * 3.14159;

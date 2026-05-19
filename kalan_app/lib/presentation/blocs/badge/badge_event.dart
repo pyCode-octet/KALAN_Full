@@ -13,3 +13,5 @@ class UnlockBadge extends BadgeEvent {
   @override
   List<Object?> get props => [badgeKey];
 }
+
+class CheckNewBadges extends BadgeEvent {}

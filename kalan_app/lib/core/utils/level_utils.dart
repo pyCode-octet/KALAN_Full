@@ -3,30 +3,32 @@ class LevelInfo {
   final int level;
   final int minPoints;
   final int maxPoints;
+  final String icon;
 
   LevelInfo({
     required this.title,
     required this.level,
     required this.minPoints,
     required this.maxPoints,
+    required this.icon,
   });
 
   int get nextLevelPoints => maxPoints;
 
   double get progress {
     if (maxPoints == minPoints) return 1.0;
-    return (maxPoints - minPoints) > 0 ? (maxPoints - minPoints).toDouble() : 0.0;
+    final p = (maxPoints - minPoints) > 0 ? (maxPoints - minPoints).toDouble() : 0.0;
+    return p;
   }
 }
 
 class LevelUtils {
   static final List<LevelInfo> levels = [
-    LevelInfo(title: 'Graine', level: 1, minPoints: 0, maxPoints: 100),
-    LevelInfo(title: 'Baobab', level: 2, minPoints: 100, maxPoints: 300),
-    LevelInfo(title: 'Feu de Brousse', level: 3, minPoints: 300, maxPoints: 600),
-    LevelInfo(title: 'Griot', level: 4, minPoints: 600, maxPoints: 1000),
-    LevelInfo(title: 'Masque', level: 5, minPoints: 1000, maxPoints: 1500),
-    LevelInfo(title: 'Ancêtre', level: 6, minPoints: 1500, maxPoints: 999999),
+    LevelInfo(title: 'Graine', level: 1, minPoints: 0, maxPoints: 100, icon: '🌱'),
+    LevelInfo(title: 'Jeune Pousse', level: 2, minPoints: 100, maxPoints: 300, icon: '🌿'),
+    LevelInfo(title: 'Arbrisseau', level: 3, minPoints: 300, maxPoints: 700, icon: '🌳'),
+    LevelInfo(title: 'Arbre Majeur', level: 4, minPoints: 700, maxPoints: 1500, icon: '🌲'),
+    LevelInfo(title: 'Baobab Sacré', level: 5, minPoints: 1500, maxPoints: 999999, icon: '🌴'),
   ];
 
   static LevelInfo getLevelInfo(int points) {

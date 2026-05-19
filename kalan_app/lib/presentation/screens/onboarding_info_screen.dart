@@ -79,7 +79,7 @@ class _OnboardingInfoScreenState extends State<OnboardingInfoScreen> {
                   const SizedBox(height: 35),
                   _buildProgressIndicator(),
                   const SizedBox(height: 35),
-                  Text(
+                  const Text(
                     'Parle-nous un peu de toi',
                     textAlign: TextAlign.center,
                     style: TextStyle(
@@ -125,7 +125,7 @@ class _OnboardingInfoScreenState extends State<OnboardingInfoScreen> {
                         ),
                       );
                     },
-                    child: Text(
+                    child: const Text(
                       'Remplir plus tard ➔',
                       style: TextStyle(
                         color: AppColors.primary,
@@ -144,7 +144,7 @@ class _OnboardingInfoScreenState extends State<OnboardingInfoScreen> {
             top: 40,
             left: 10,
             child: IconButton(
-              icon: Icon(Icons.arrow_back, color: AppColors.primary, size: 28),
+              icon: const Icon(Icons.arrow_back, color: AppColors.primary, size: 28),
               onPressed: () => Navigator.pop(context),
             ),
           ),
@@ -261,7 +261,7 @@ class _OnboardingInfoScreenState extends State<OnboardingInfoScreen> {
         border: Border.all(color: Colors.grey[300]!, width: 2),
       ),
       child: DropdownButtonFormField<int>(
-        value: _selectedClassId,
+        initialValue: _selectedClassId,
         hint: Text(
           _isLoadingClasses ? 'Chargement...' : 'Ta classe',
           style: TextStyle(color: Colors.grey[400], fontWeight: FontWeight.w600, fontSize: 15),
@@ -277,7 +277,7 @@ class _OnboardingInfoScreenState extends State<OnboardingInfoScreen> {
         }).toList(),
         onChanged: (val) => setState(() => _selectedClassId = val),
         decoration: const InputDecoration(border: InputBorder.none),
-        icon: Icon(Icons.keyboard_arrow_down, color: AppColors.primary),
+        icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.primary),
         dropdownColor: Colors.white,
         borderRadius: BorderRadius.circular(14),
       ),

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/repositories/user_repository.dart';
+import '../../core/utils/level_utils.dart';
 import '../local/database_helper.dart';
 import '../remote/supabase_service.dart';
 import '../../services/connectivity_service.dart';
@@ -189,13 +190,18 @@ class UserRepositoryImpl implements UserRepository {
     final userId = profile['uuid'];
     if (userId == null) return;
 
-    // Calcul du nouveau niveau simplifié (ex: tous les 100 points)
-    int newLevel = (newPoints / 100).floor() + 1;
-    if (newLevel < 1) newLevel = 1;
+    // Use LevelUtils for level calculation
+    final currentLevelInfo = LevelUtils.getLevelInfo(currentPoints);
+    final newLevelInfo = LevelUtils.getLevelInfo(newPoints);
+    
+    int newLevel = newLevelInfo.level;
+    final int currentLevel = currentLevelInfo.level;
 
-    final currentLevel = profile['level'] as int? ?? 1;
-    if (currentLevel == 1 && newLevel >= 2) {
-      await _dbHelper.unlockBadge(userId, 'pousse');
+    // Bonus reward on level up
+    if (newLevel > currentLevel) {
+      newPoints += 50; // Cadeau de 50 points
+      final finalLevelInfo = LevelUtils.getLevelInfo(newPoints);
+      newLevel = finalLevelInfo.level;
     }
 
     if (newLevel > currentLevel) {
@@ -207,7 +213,7 @@ class UserRepositoryImpl implements UserRepository {
         'user_id': userId,
         'type': 'leaderboard',
         'title': 'Niveau Supérieur ! 🎉',
-        'message': 'Bravo ! Tu as atteint le niveau $newLevel.',
+        'message': 'Félicitations ! Tu as atteint le niveau $newLevel : ${LevelUtils.getLevelTitle(newLevel)}.',
         'is_read': 0,
         'created_at': nowStr,
       };
@@ -221,7 +227,7 @@ class UserRepositoryImpl implements UserRepository {
           'user_id': userId,
           'type': 'leaderboard',
           'title': 'Niveau Supérieur ! 🎉',
-          'message': 'Bravo ! Tu as atteint le niveau $newLevel.',
+          'message': 'Félicitations ! Tu as atteint le niveau $newLevel : ${LevelUtils.getLevelTitle(newLevel)}.',
           'is_read': false,
           'created_at': nowStr,
         }),

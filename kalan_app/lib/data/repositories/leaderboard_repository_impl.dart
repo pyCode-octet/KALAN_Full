@@ -3,7 +3,6 @@ import 'package:sqflite/sqflite.dart';
 import '../../domain/entities/leaderboard_entry.dart';
 import '../../domain/repositories/leaderboard_repository.dart';
 import '../local/database_helper.dart';
-import '../models/leaderboard_entry_model.dart';
 import '../remote/supabase_service.dart';
 import '../../services/connectivity_service.dart';
 

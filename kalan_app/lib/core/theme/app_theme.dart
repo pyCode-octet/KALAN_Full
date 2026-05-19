@@ -8,9 +8,9 @@ class AppTheme {
 
   static ThemeData _buildTheme(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
-    final bg = AppColors.background; // Fond global blanc
-    final surf = AppColors.surface; // Toujours blanc
-    final onBg = AppColors.onBackground; // Toujours sombre pour la lisibilité
+    const bg = AppColors.background; // Fond global blanc
+    const surf = AppColors.surface; // Toujours blanc
+    const onBg = AppColors.onBackground; // Toujours sombre pour la lisibilité
 
     return ThemeData(
       useMaterial3: true,

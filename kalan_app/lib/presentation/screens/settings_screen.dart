@@ -33,7 +33,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         centerTitle: true,
       ),
       body: ListView(
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         children: [
           _buildSection('Compte & Profil'),
           _buildSettingsCard([
@@ -41,7 +41,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildDivider(),
             _buildSettingTile(Icons.lock_outline_rounded, 'Sécurité', 'Mot de passe, PIN', () {}),
           ]),
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
           _buildSection('Préférences'),
           _buildSettingsCard([
             _buildSwitchTile(Icons.notifications_none_rounded, 'Notifications', 'Alertes de révision', _notifications, (val) => setState(() => _notifications = val)),
@@ -50,7 +50,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildDivider(),
             _buildSwitchTile(Icons.data_usage_rounded, 'Économie de données', 'Chargement optimisé', _dataSaver, (val) => setState(() => _dataSaver = val)),
           ]),
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
           _buildSection('Support & Synchronisation'),
           _buildSettingsCard([
             _buildSettingTile(Icons.sync_rounded, 'Forcer la synchronisation', 'Mettre à jour avec le Cloud', () {
@@ -65,7 +65,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               );
             }),
           ]),
-          SizedBox(height: 40),
+          const SizedBox(height: 40),
           ElevatedButton(
             onPressed: _handleLogout,
             style: ElevatedButton.styleFrom(
@@ -73,12 +73,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               foregroundColor: AppColors.error,
               elevation: 0,
               side: BorderSide(color: AppColors.error.withValues(alpha: 0.2)),
-              padding: EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
             child: const Text('DÉCONNEXION', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.1)),
           ),
-          SizedBox(height: 40),
+          const SizedBox(height: 40),
         ],
       ),
     );
@@ -86,7 +86,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildSection(String title) {
     return Padding(
-      padding: EdgeInsets.only(left: 8, bottom: 8),
+      padding: const EdgeInsets.only(left: 8, bottom: 8),
       child: Text(title.toUpperCase(), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey.shade600, letterSpacing: 1.1)),
     );
   }
@@ -106,12 +106,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildSettingTile(IconData icon, String title, String subtitle, VoidCallback onTap, {Color? iconColor}) {
     return ListTile(
       leading: Container(
-        padding: EdgeInsets.all(8),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(color: (iconColor ?? const Color(0xFF854F0B)).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
         child: Icon(icon, color: iconColor ?? const Color(0xFF854F0B), size: 20),
       ),
-      title: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-      subtitle: Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey)),
+      title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+      subtitle: Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.grey)),
       trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
       onTap: onTap,
     );
@@ -120,12 +120,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildSwitchTile(IconData icon, String title, String subtitle, bool value, Function(bool) onChanged) {
     return ListTile(
       leading: Container(
-        padding: EdgeInsets.all(8),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(color: const Color(0xFF854F0B).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
         child: Icon(icon, color: const Color(0xFF854F0B), size: 20),
       ),
-      title: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-      subtitle: Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey)),
+      title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+      subtitle: Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.grey)),
       trailing: Switch.adaptive(
         value: value,
         onChanged: onChanged,
@@ -141,9 +141,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showLanguagePicker() {
     showModalBottomSheet(
       context: context,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) => Container(
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: ['Français', 'Mooré', 'Dioula', 'Fulfuldé'].map((lang) => ListTile(
@@ -193,9 +193,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
-                SizedBox(height: 16),
-                Text('Choisis ton avatar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                SizedBox(height: 12),
+                const SizedBox(height: 16),
+                const Text('Choisis ton avatar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                const SizedBox(height: 12),
                 SizedBox(
                   height: 220,
                   child: GridView.builder(

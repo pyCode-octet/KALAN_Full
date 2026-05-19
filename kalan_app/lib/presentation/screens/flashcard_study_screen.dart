@@ -314,9 +314,9 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
                       border: Border.all(color: const Color(0xFFF3A9A9), width: 1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Row(
+                    child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
+                      children: [
                         Icon(
                           Icons.close,
                           color: Color(0xFFC92A2A),
@@ -352,9 +352,9 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
                       border: Border.all(color: const Color(0xFFB7D98C), width: 1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Row(
+                    child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
+                      children: [
                         Icon(
                           Icons.check,
                           color: Color(0xFF2D6A2D),
@@ -425,8 +425,8 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFFFDFCF8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Column(
-          children: const [
+        title: const Column(
+          children: [
             Text(
               '🏆',
               style: TextStyle(fontSize: 48),

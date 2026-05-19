@@ -583,7 +583,7 @@ class DatabaseHelper {
     }
 
     final String notifId = 'badge-$badgeKey-${DateTime.now().millisecondsSinceEpoch}';
-    final String notifTitle = 'Nouveau Badge ! 🏆';
+    const String notifTitle = 'Nouveau Badge ! 🏆';
     final String notifMessage = 'Félicitations, tu as débloqué le badge "$badgeName" !';
 
     final notificationPayload = {
@@ -629,5 +629,68 @@ class DatabaseHelper {
       await unlockBadge(userId, 'chercheur');
     }
   }
-}
 
+  /// Vérifie et attribue automatiquement tous les badges en fonction de l'activité de l'utilisateur.
+  /// Retourne la liste des badges nouvellement débloqués (clés).
+  Future<List<String>> checkAndAwardBadges(String userId) async {
+    if (userId == 'guest' || userId.isEmpty) return [];
+    final db = await database;
+    final List<String> newlyUnlocked = [];
+
+    // Récupère les badges déjà débloqués
+    final existing = await db.query('user_badges', where: 'user_id = ?', whereArgs: [userId]);
+    final unlockedKeys = existing.map((e) => e['badge_key'] as String).toSet();
+
+    // Badge "explorateur" : avoir étudié 10 fiches (10 decks créés)
+    if (!unlockedKeys.contains('explorateur')) {
+      final deckCount = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM decks WHERE user_id = ?', [userId])
+      ) ?? 0;
+      if (deckCount >= 10) {
+        await unlockBadge(userId, 'explorateur');
+        newlyUnlocked.add('explorateur');
+      }
+    }
+
+    // Badge "plume" : avoir créé 5 fiches
+    if (!unlockedKeys.contains('plume')) {
+      final deckCount = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM decks WHERE user_id = ?', [userId])
+      ) ?? 0;
+      if (deckCount >= 5) {
+        await unlockBadge(userId, 'plume');
+        newlyUnlocked.add('plume');
+      }
+    }
+
+    // Badge "polyglotte" : avoir des fiches dans au moins 2 matières différentes
+    if (!unlockedKeys.contains('polyglotte')) {
+      final subjects = await db.rawQuery(
+        'SELECT DISTINCT subject FROM decks WHERE user_id = ? AND subject IS NOT NULL', [userId]
+      );
+      if (subjects.length >= 2) {
+        await unlockBadge(userId, 'polyglotte');
+        newlyUnlocked.add('polyglotte');
+      }
+    }
+
+    // Badge "philosophe" : avoir fait 5 quiz avec un score moyen >= 80%
+    if (!unlockedKeys.contains('philosophe')) {
+      final quizCount = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM quiz_results WHERE user_id = ?', [userId])
+      ) ?? 0;
+      if (quizCount >= 5) {
+        final avgResult = await db.rawQuery(
+          'SELECT AVG(CAST(score AS FLOAT) / total) as avg FROM quiz_results WHERE user_id = ?', [userId]
+        );
+        final avg = (avgResult.first['avg'] as double?) ?? 0.0;
+        if (avg >= 0.8) {
+          await unlockBadge(userId, 'philosophe');
+          newlyUnlocked.add('philosophe');
+        }
+      }
+    }
+
+    return newlyUnlocked;
+  }
+}

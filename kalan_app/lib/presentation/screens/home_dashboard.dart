@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/utils/level_utils.dart';
 import '../blocs/user/user_bloc.dart';
 import '../blocs/user/user_state.dart';
+import '../widgets/tree_evolution.dart';
 import 'flashcard_study_screen.dart';
 import 'deck_list_screen.dart';
 import 'badges_screen.dart';
@@ -73,10 +74,6 @@ class HomeDashboard extends StatelessWidget {
               Text(
                 'Bonjour, ${profile['pseudo'] ?? 'Ami'} 👋',
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A)),
-              ),
-              const Text(
-                'Prêt à apprendre aujourd\'hui ?',
-                style: TextStyle(fontSize: 13, color: Color(0xFF999999)),
               ),
             ],
           ),
@@ -166,9 +163,9 @@ class HomeDashboard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4)),
         ],
-        border: Border.all(color: Colors.black.withOpacity(0.06), width: 0.5),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.06), width: 0.5),
       ),
       child: Row(
         children: [
@@ -221,7 +218,9 @@ class HomeDashboard extends StatelessWidget {
                 width: 64,
                 height: 64,
                 decoration: const BoxDecoration(color: Color(0xFFEAF3DE), shape: BoxShape.circle),
-                child: const Icon(Icons.park, size: 40, color: Color(0xFF2D6A2D)),
+                child: Center(
+                  child: TreeEvolution(stage: levelInfo.level, size: 48),
+                ),
               ),
               const SizedBox(height: 6),
               Text(
@@ -283,7 +282,7 @@ class HomeDashboard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.black.withOpacity(0.06), width: 0.5),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.06), width: 0.5),
         ),
         child: Column(
           children: [
@@ -334,18 +333,30 @@ class HomeDashboard extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final badge = earnedBadges[index];
                     final color = Color(badge['color'] as int);
+                    final imagePath = badge['image_path'] as String?;
                     return Column(
                       children: [
                         Container(
                           width: 52,
                           height: 52,
                           decoration: BoxDecoration(
-                            color: color.withOpacity(0.15),
+                            color: color.withValues(alpha: 0.15),
                             shape: BoxShape.circle,
                             border: Border.all(color: color, width: 2),
                           ),
-                          alignment: Alignment.center,
-                          child: Text(badge['emoji'] ?? '🏆', style: const TextStyle(fontSize: 24)),
+                          child: ClipOval(
+                            child: imagePath != null
+                                ? Image.asset(
+                                    'assets/badges/$imagePath',
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Center(
+                                      child: Text(badge['emoji'] ?? '🏆', style: const TextStyle(fontSize: 22)),
+                                    ),
+                                  )
+                                : Center(
+                                    child: Text(badge['emoji'] ?? '🏆', style: const TextStyle(fontSize: 22)),
+                                  ),
+                          ),
                         ),
                         const SizedBox(height: 6),
                         Text(
@@ -393,13 +404,13 @@ class HomeDashboard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.black.withOpacity(0.06), width: 0.5),
+                border: Border.all(color: Colors.black.withValues(alpha: 0.06), width: 0.5),
               ),
               child: ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: recentDecks.length,
-                separatorBuilder: (_, __) => Divider(height: 1, color: Colors.black.withOpacity(0.05)),
+                separatorBuilder: (_, __) => Divider(height: 1, color: Colors.black.withValues(alpha: 0.05)),
                 itemBuilder: (context, index) {
                   final deck = recentDecks[index];
                   final subject = deck['subject'] ?? 'Général';
@@ -422,7 +433,7 @@ class HomeDashboard extends StatelessWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: _getSubjectColor(subject).withOpacity(0.15),
+                        color: _getSubjectColor(subject).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(Icons.book, size: 20, color: _getSubjectColor(subject)),

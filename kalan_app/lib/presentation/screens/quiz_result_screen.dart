@@ -6,6 +6,7 @@ import '../../core/utils/level_utils.dart';
 import '../blocs/user/user_bloc.dart';
 import '../blocs/user/user_state.dart';
 import 'quiz_screen.dart';
+import '../widgets/tree_evolution.dart';
 import 'home_screen.dart';
 
 class QuizResultScreen extends StatelessWidget {
@@ -182,17 +183,23 @@ class QuizResultScreen extends StatelessWidget {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    'Rang : ${currentLevelInfo.title}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 16,
-                                      color: Color(0xFF111111),
-                                    ),
+                                  Row(
+                                    children: [
+                                      TreeEvolution(stage: currentLevelInfo.level, size: 24),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Rang : ${currentLevelInfo.title}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 16,
+                                          color: Color(0xFF111111),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   Text(
                                     'Niveau ${currentLevelInfo.level}',
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: AppColors.primary,
                                     ),
@@ -206,7 +213,7 @@ class QuizResultScreen extends StatelessWidget {
                                   value: (points / currentLevelInfo.nextLevelPoints).clamp(0.0, 1.0),
                                   minHeight: 10,
                                   backgroundColor: const Color(0xFFF0EBE0),
-                                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -306,7 +313,7 @@ class QuizResultScreen extends StatelessWidget {
                             deckTitle: deckTitle ?? 'Quiz',
                           )),
                         ),
-                        child: Text(
+                        child: const Text(
                           'Rejouer le Quiz',
                           style: TextStyle(
                             fontSize: 15,

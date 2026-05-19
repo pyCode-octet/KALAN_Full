@@ -3,12 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/utils/level_utils.dart';
 import '../blocs/user/user_bloc.dart';
 import '../blocs/user/user_event.dart';
 import '../blocs/user/user_state.dart';
+import '../widgets/tree_evolution.dart';
 import 'badges_screen.dart';
 import 'login_screen.dart';
 import 'about_screen.dart';
@@ -209,8 +208,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onTap: () => _showEditProfileBottomSheet(context, profile),
               child: Container(
                 padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0F7F0),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF0F7F0),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.edit, size: 14, color: Color(0xFF2E7D32)),
@@ -229,6 +228,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              TreeEvolution(stage: levelInfo.level, size: 24),
+              const SizedBox(width: 6),
               Text('NIVEAU ${levelInfo.level}', style: const TextStyle(color: Color(0xFF2E7D32), fontSize: 11, fontWeight: FontWeight.w800)),
               const SizedBox(width: 10),
               Stack(
@@ -351,7 +352,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             border: Border.all(color: Color(b['color']), width: 2),
                           ),
                           alignment: Alignment.center,
-                          child: Text(b['emoji'] ?? '🏆', style: const TextStyle(fontSize: 26)),
+                          child: ClipOval(
+                            child: b['image_path'] != null
+                                ? Image.asset(
+                                    'assets/badges/${b['image_path']}',
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Text(b['emoji'] ?? '🏆', style: const TextStyle(fontSize: 26)),
+                                  )
+                                : Text(b['emoji'] ?? '🏆', style: const TextStyle(fontSize: 26)),
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(b['label'], style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF555555))),
@@ -554,7 +563,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               _SettingItem(
                 icon: Icons.info_outline_rounded,
-                iconBg: Color(0xFFF3F4F6),
+                iconBg: const Color(0xFFF3F4F6),
                 title: 'À propos',
                 subtitle: 'En savoir plus sur KALAN',
                 prefKey: 'about',

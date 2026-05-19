@@ -20,18 +20,18 @@ class LocalAIService {
     'Qwen/Qwen2.5-7B-Instruct',
   ];
 
-  Future<List<Map<String, String>>> generateFlashcards({
+  Future<Map<String, dynamic>> generateFlashcards({
     required String text,
-    String subject = 'Général',
-    String level = 'Scolaire',
   }) async {
+    String detectedSubject = _detectSubjectHeuristic(text);
+
     // 1. Tenter d'abord la génération en ligne qui produit des fiches de qualité exceptionnelle
     debugPrint('Mode Hybride : Tentative de génération en ligne via HuggingFace API...');
     try {
-      final onlineResults = await _generateOnline(text, subject, level).timeout(const Duration(seconds: 15));
+      final onlineResults = await _generateOnline(text, detectedSubject, 'Général').timeout(const Duration(seconds: 15));
       if (onlineResults.isNotEmpty) {
         debugPrint('✅ Fiches générées avec succès en ligne (HuggingFace)');
-        return onlineResults;
+        return {'subject': detectedSubject, 'flashcards': onlineResults};
       }
     } catch (e) {
       debugPrint('⚠️ Inaccessible en ligne (pas d\'internet ou erreur quota), basculement vers l\'IA locale : $e');
@@ -39,7 +39,35 @@ class LocalAIService {
 
     // 2. Si échec ou hors ligne, utiliser l'IA locale Gemma
     debugPrint('Mode Offline : Utilisation de l\'IA locale (Gemma)...');
-    return await _generateOffline(text, subject, level);
+    final offlineResults = await _generateOffline(text, detectedSubject, 'Général');
+    return {'subject': detectedSubject, 'flashcards': offlineResults};
+  }
+
+  String _detectSubjectHeuristic(String text) {
+    final lowerText = text.toLowerCase();
+    
+    if (lowerText.contains('fraction') || lowerText.contains('équation') || lowerText.contains('calculer') || lowerText.contains('géométrie') || lowerText.contains('triangle') || lowerText.contains('théorème') || lowerText.contains('nombre') || lowerText.contains('fonction')) {
+      return 'Mathématiques';
+    }
+    if (lowerText.contains('cellule') || lowerText.contains('plante') || lowerText.contains('corps humain') || lowerText.contains('organe') || lowerText.contains('adn') || lowerText.contains('génétique') || lowerText.contains('reproduction')) {
+      return 'SVT';
+    }
+    if (lowerText.contains('chimie') || lowerText.contains('physique') || lowerText.contains('atome') || lowerText.contains('molécule') || lowerText.contains('force') || lowerText.contains('vitesse') || lowerText.contains('pesanteur')) {
+      return 'Physique-Chimie';
+    }
+    if (lowerText.contains('informatique') || lowerText.contains('ordinateur') || lowerText.contains('code') || lowerText.contains('programmation') || lowerText.contains('algorithme')) {
+      return 'Informatique';
+    }
+    if (lowerText.contains('poème') || lowerText.contains('conjugaison') || lowerText.contains('verbe') || lowerText.contains('grammaire') || lowerText.contains('orthographe') || lowerText.contains('littérature') || lowerText.contains('adjectif') || lowerText.contains('français')) {
+      return 'Français';
+    }
+    if (lowerText.contains('histoire') || lowerText.contains('guerre') || lowerText.contains('siècle') || lowerText.contains('géographie') || lowerText.contains('climat') || lowerText.contains('carte') || lowerText.contains('afrique')) {
+      return 'Histoire-Géo';
+    }
+    if (lowerText.contains('english') || lowerText.contains('vocabulary') || lowerText.contains('translate') || lowerText.contains('pronoun')) {
+      return 'Anglais';
+    }
+    return 'Autre';
   }
 
   Future<List<Map<String, String>>> _generateOnline(String text, String subject, String level) async {
@@ -104,7 +132,7 @@ class LocalAIService {
       }
 
       // Tronquer le texte pour utiliser pleinement la fenêtre de contexte de Gemma 3 1B (max 8000 car.)
-      final truncatedText = text.length > 8000 ? text.substring(0, 8000) + '...' : text;
+      final truncatedText = text.length > 8000 ? '${text.substring(0, 8000)}...' : text;
 
       final prompt = _buildFlashcardPrompt(truncatedText, subject, level, isOnline: false);
       final rawResponse = await _gemmaService.generateText(prompt, maxTokens: 1024);
@@ -222,7 +250,7 @@ Q1:''';
       return [
         {
           'question': 'De quoi parle ce cours ?',
-          'answer': text.length > 100 ? text.substring(0, 100).trim() + '...' : text.trim()
+          'answer': text.length > 100 ? '${text.substring(0, 100).trim()}...' : text.trim()
         }
       ];
     }
@@ -282,7 +310,7 @@ Q1:''';
     if (cards.isEmpty) {
       cards.add({
         'question': 'Quel est le sujet clé abordé dans ce document ?',
-        'answer': cleanText.length > 150 ? cleanText.substring(0, 150) + '...' : cleanText,
+        'answer': cleanText.length > 150 ? '${cleanText.substring(0, 150)}...' : cleanText,
       });
     }
 

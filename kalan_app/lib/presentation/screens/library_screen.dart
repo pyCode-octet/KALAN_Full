@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../core/constants/app_colors.dart';
+import 'package:share_plus/share_plus.dart';
 import '../blocs/deck/deck_bloc.dart';
 import '../blocs/deck/deck_event.dart';
 import '../blocs/deck/deck_state.dart';
 import '../../domain/entities/deck.dart';
 import '../../data/local/database_helper.dart';
 import 'deck_list_screen.dart';
-import 'create_deck_screen.dart';
 import 'flashcard_study_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
@@ -23,6 +22,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   final List<String> _tabs = ['Toutes', 'Récentes', 'Favoris'];
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
+  String _sortOption = 'Date de création';
 
   void _confirmDelete(BuildContext context, Deck deck) {
     showDialog(
@@ -109,7 +109,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               ),
               IconButton(
                 onPressed: () => _showFilterBottomSheet(),
-                icon: const Icon(Icons.tune, size: 24, color: const Color(0xFF1A1A1A)),
+                icon: const Icon(Icons.tune, size: 24, color: Color(0xFF1A1A1A)),
               ),
             ],
           ),
@@ -166,6 +166,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
             return const Center(child: Text('Aucune fiche. Crée ta première fiche !'));
           }
 
+          if (_sortOption == 'Nom (A-Z)') {
+            filteredDecks.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+          } else if (_sortOption == 'Progression') {
+            filteredDecks.sort((a, b) {
+              final progA = a.cardCount > 0 ? (a.masteredCount / a.cardCount) : 0.0;
+              final progB = b.cardCount > 0 ? (b.masteredCount / b.cardCount) : 0.0;
+              return progB.compareTo(progA);
+            });
+          }
+
           return FutureBuilder<List<Map<String, dynamic>>>(
             future: DatabaseHelper.instance.getAllSubjects(),
             builder: (context, snapshot) {
@@ -217,13 +227,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
+                    decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
                     child: Text('${decks.length} fiches', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
                   ),
                 ],
               ),
               GestureDetector(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DeckListScreen())),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DeckListScreen(filterSubject: subject['label']))),
                 child: const Text('Voir tout', style: TextStyle(fontSize: 12, color: Color(0xFF2D6A2D), fontWeight: FontWeight.bold)),
               ),
             ],
@@ -249,16 +259,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Widget _buildDeckCard(Deck deck, Color color) {
     final totalCards = deck.cardCount;
-    final masteredCards = deck.masteredCount;
-    final masteryPercentage = totalCards > 0 ? (masteredCards / totalCards * 100).round() : 0;
-    final masteryColor = masteryPercentage < 50 ? const Color(0xFFE07B39) : color;
+    final displayPercentage = deck.lastQuizScore ?? 
+        (totalCards > 0 ? (deck.masteredCount / totalCards * 100).round() : 0);
+    
+    // Change color for 'Autre' or default grey to something more vibrant (e.g., Purple)
+    final isDefaultGrey = color.red == 0x9E && color.green == 0x9E && color.blue == 0x9E;
+    final categoryColor = isDefaultGrey ? const Color(0xFF9C27B0) : color;
+    final masteryColor = displayPercentage < 50 ? const Color(0xFFE07B39) : categoryColor;
 
     return GestureDetector(
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => FlashcardStudyScreen(deckTitle: deck.title, deckUuid: deck.uuid))),
       onLongPress: () => _confirmDelete(context, deck),
       child: Container(
         width: 155,
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -267,37 +281,50 @@ class _LibraryScreenState extends State<LibraryScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 36, height: 36,
-              decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
-              child: Icon(Icons.book, color: color, size: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  width: 32, height: 32,
+                  decoration: BoxDecoration(color: categoryColor.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
+                  child: Icon(Icons.book, color: categoryColor, size: 18),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.share_rounded, size: 16, color: Color(0xFF888888)),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () {
+                    Share.share('Révise avec moi la fiche "${deck.title}" sur KALAN ! 📚\n\nApprends plus vite avec KALAN.');
+                  },
+                ),
+              ],
             ),
             const Spacer(),
             Text(
               deck.title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A)),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A)),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
-              '${deck.level ?? 'Niveau'} · $totalCards cartes',
-              style: const TextStyle(fontSize: 11, color: Color(0xFF888888)),
+              '$totalCards cartes',
+              style: const TextStyle(fontSize: 10, color: Color(0xFF888888)),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Stack(
               children: [
                 Container(height: 4, width: double.infinity, decoration: BoxDecoration(color: const Color(0xFFE8E4DA), borderRadius: BorderRadius.circular(4))),
                 FractionallySizedBox(
-                  widthFactor: (masteryPercentage / 100).clamp(0.0, 1.0),
+                  widthFactor: (displayPercentage / 100).clamp(0.0, 1.0),
                   child: Container(height: 4, decoration: BoxDecoration(color: masteryColor, borderRadius: BorderRadius.circular(4))),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(
-              '$masteryPercentage% maîtrisé',
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: masteryColor),
+              '$displayPercentage% maîtrisé',
+              style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: masteryColor),
             ),
           ],
         ),
@@ -318,9 +345,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
           children: [
             const Text('Trier par', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            _filterOption('Date de création', true),
-            _filterOption('Nom (A-Z)', false),
-            _filterOption('Progression', false),
+            _filterOption('Date de création', _sortOption == 'Date de création'),
+            _filterOption('Nom (A-Z)', _sortOption == 'Nom (A-Z)'),
+            _filterOption('Progression', _sortOption == 'Progression'),
             const SizedBox(height: 20),
           ],
         ),
@@ -330,7 +357,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Widget _filterOption(String label, bool isSelected) {
     return ListTile(
-      onTap: () => Navigator.pop(context),
+      onTap: () {
+        setState(() => _sortOption = label);
+        Navigator.pop(context);
+      },
       contentPadding: EdgeInsets.zero,
       title: Text(label, style: TextStyle(color: isSelected ? const Color(0xFF2D6A2D) : Colors.black, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
       trailing: isSelected ? const Icon(Icons.check, color: Color(0xFF2D6A2D)) : null,

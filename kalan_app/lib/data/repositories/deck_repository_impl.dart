@@ -25,7 +25,8 @@ class DeckRepositoryImpl implements DeckRepository {
     final localMaps = await db.rawQuery('''
       SELECT d.*, 
              (SELECT COUNT(*) FROM flashcards WHERE deck_id = d.uuid) as cardCount,
-             (SELECT COUNT(*) FROM flashcards WHERE deck_id = d.uuid AND difficulty >= 2) as masteredCount
+             (SELECT COUNT(*) FROM flashcards WHERE deck_id = d.uuid AND difficulty >= 2) as masteredCount,
+             (SELECT CAST(score AS FLOAT) * 100 / total FROM quiz_results WHERE deck_id = d.uuid ORDER BY created_at DESC LIMIT 1) as lastQuizScore
       FROM decks d
       ORDER BY d.created_at DESC
     ''');
@@ -82,6 +83,7 @@ class DeckRepositoryImpl implements DeckRepository {
         createdAt: model.createdAt,
         cardCount: data['cardCount'] ?? 0,
         masteredCount: data['masteredCount'] ?? 0,
+        lastQuizScore: data['lastQuizScore'] != null ? (data['lastQuizScore'] as num).round() : null,
       );
     }).toList();
   }

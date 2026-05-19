@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../core/constants/app_colors.dart';
 import '../../domain/entities/flashcard.dart';
 import '../blocs/flashcard/flashcard_bloc.dart';
 import '../blocs/flashcard/flashcard_event.dart';
@@ -24,7 +23,7 @@ class QuizScreen extends StatefulWidget {
 
 class _QuizScreenState extends State<QuizScreen> {
   int _currentQuestionIndex = 0;
-  int _score = 0;
+  final int _score = 0;
   int _totalCorrect = 0;
   int _totalAnswered = 0;
   final DateTime _startTime = DateTime.now();

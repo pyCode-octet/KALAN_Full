@@ -93,35 +93,35 @@ class _AIStatusIndicatorState extends State<AIStatusIndicator> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
+        title: const Row(
           children: [
             Icon(Icons.psychology_rounded, color: AppColors.primary, size: 28),
-            const SizedBox(width: 10),
-            const Text("IA Locale KALAN"),
+            SizedBox(width: 10),
+            Text("IA Locale KALAN"),
           ],
         ),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               "Modèle : Gemma 3 1B (Google)",
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
-            const SizedBox(height: 12),
-            const Text(
+            SizedBox(height: 12),
+            Text(
               "Ce modèle d'un milliard de paramètres est installé directement sur ton smartphone.",
             ),
-            const SizedBox(height: 8),
-            const Text(
+            SizedBox(height: 8),
+            Text(
               "Il te permet de résumer des textes et de créer des fiches de révision instantanément, même sans aucune connexion Internet.",
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Row(
               children: [
                 Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20),
-                const SizedBox(width: 8),
-                const Text(
+                SizedBox(width: 8),
+                Text(
                   "Statut : Prêt à réviser offline !",
                   style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
                 ),
@@ -144,11 +144,11 @@ class _AIStatusIndicatorState extends State<AIStatusIndicator> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
+        title: const Row(
           children: [
             Icon(Icons.cloud_download_rounded, color: AppColors.primary),
-            const SizedBox(width: 10),
-            const Expanded(
+            SizedBox(width: 10),
+            Expanded(
               child: Text("Installer l'IA Locale"),
             ),
           ],
@@ -209,7 +209,7 @@ class _AIStatusIndicatorState extends State<AIStatusIndicator> {
     if (_isDownloaded) {
       return IconButton(
         tooltip: "IA locale prête pour le offline",
-        icon: Icon(Icons.cloud_done_rounded, color: AppColors.primary, size: 26),
+        icon: const Icon(Icons.cloud_done_rounded, color: AppColors.primary, size: 26),
         onPressed: _showStatusDialog,
       );
     }
@@ -232,7 +232,7 @@ class _AIStatusIndicatorState extends State<AIStatusIndicator> {
             const SizedBox(width: 8),
             Text(
               "${(_downloadProgress * 100).toInt()}%",
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 13,
                 color: AppColors.primary,
                 fontWeight: FontWeight.bold,

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:kalan_app/presentation/screens/settings_screen.dart';
-import 'package:kalan_app/presentation/widgets/ai_status_indicator.dart';
 import '../../core/constants/app_colors.dart';
 import '../blocs/deck/deck_bloc.dart';
 import '../blocs/deck/deck_event.dart';
@@ -10,7 +8,6 @@ import '../widgets/empty_state.dart';
 import '../widgets/loading_shimmer.dart';
 import 'flashcard_study_screen.dart';
 import 'share_screen.dart';
-import 'create_deck_screen.dart';
 import '../../domain/entities/deck.dart';
 
 class DeckListScreen extends StatelessWidget {
@@ -36,13 +33,6 @@ class DeckListScreen extends StatelessWidget {
         title: Text(filterSubject ?? 'Mes Decks'),
         backgroundColor: Colors.white,
         foregroundColor: AppColors.onBackground,
-        actions: [
-          const AIStatusIndicator(),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
-          ),
-        ],
       ),
       body: BlocBuilder<DeckBloc, DeckState>(
         builder: (context, state) {
@@ -97,7 +87,7 @@ class DeckListScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    ...subjectDecks.map((deck) => _buildDeckItem(context, deck, config)).toList(),
+                    ...subjectDecks.map((deck) => _buildDeckItem(context, deck, config)),
                   ],
                 );
               },
@@ -148,7 +138,7 @@ class DeckListScreen extends StatelessWidget {
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.share_rounded, color: AppColors.secondary, size: 20),
+                icon: const Icon(Icons.share_rounded, color: AppColors.secondary, size: 20),
                 onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ShareScreen(deck: deck))),
               ),
               IconButton(

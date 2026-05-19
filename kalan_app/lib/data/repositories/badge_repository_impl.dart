@@ -96,6 +96,13 @@ class BadgeRepositoryImpl implements BadgeRepository {
     }
   }
 
+  @override
+  Future<List<String>> checkAndAwardBadges() async {
+    final userId = SupabaseService.currentUser?.id ?? await _getLocalUserId();
+    if (userId == null) return [];
+    return await _dbHelper.checkAndAwardBadges(userId);
+  }
+
   Future<void> _addToSyncQueue(String action, Map<String, dynamic> payload) async {
     final db = await _dbHelper.database;
     await db.insert('sync_queue', {

@@ -42,7 +42,7 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
                   const SizedBox(height: 20),
                   _buildLogo(),
                   const SizedBox(height: 35),
-                  Text(
+                  const Text(
                     'Choisis ton pseudo',
                     textAlign: TextAlign.center,
                     style: TextStyle(
@@ -64,7 +64,7 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
                   const SizedBox(height: 24),
                   _buildInputBox('Ton pseudo'),
                   const SizedBox(height: 30),
-                  Text(
+                  const Text(
                     'Choisis ton avatar',
                     textAlign: TextAlign.center,
                     style: TextStyle(
@@ -103,7 +103,7 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
                               MaterialPageRoute(builder: (_) => const LoginScreen()),
                             );
                           },
-                          child: Text(
+                          child: const Text(
                             'Déjà un compte ? Connecte-toi ici',
                             style: TextStyle(
                               color: AppColors.primary,
@@ -124,7 +124,7 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
             top: 40,
             left: 10,
             child: IconButton(
-              icon: Icon(Icons.arrow_back, color: AppColors.primary, size: 28),
+              icon: const Icon(Icons.arrow_back, color: AppColors.primary, size: 28),
               onPressed: () => Navigator.pop(context),
             ),
           ),

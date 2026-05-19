@@ -6,6 +6,16 @@ import '../blocs/user/user_event.dart';
 import '../blocs/user/user_state.dart';
 import '../blocs/notification/notification_bloc.dart';
 import '../blocs/notification/notification_event.dart';
+import '../blocs/badge/badge_bloc.dart';
+import '../blocs/badge/badge_event.dart';
+import '../blocs/badge/badge_state.dart';
+import '../blocs/deck/deck_bloc.dart';
+import '../blocs/deck/deck_state.dart';
+import '../blocs/quiz/quiz_bloc.dart';
+import '../blocs/quiz/quiz_state.dart';
+import '../widgets/badge_unlock_popup.dart';
+import '../widgets/level_up_popup.dart';
+import '../../core/utils/level_utils.dart';
 import 'home_dashboard.dart';
 import 'library_screen.dart';
 import 'profile_screen.dart';
@@ -26,6 +36,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  int? _lastKnownLevel;
 
   @override
   void initState() {
@@ -71,13 +82,63 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<UserBloc, UserState>(
-      listener: (context, state) {
-        if (state is UserLoaded) {
-          final userId = state.profile['uuid'] ?? 'guest';
-          context.read<NotificationBloc>().add(LoadNotifications(userId));
-        }
-      },
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<UserBloc, UserState>(
+          listener: (context, state) {
+            if (state is UserLoaded) {
+              final userId = state.profile['uuid'] ?? 'guest';
+              context.read<NotificationBloc>().add(LoadNotifications(userId));
+              // Check badges on app start/profile load
+              context.read<BadgeBloc>().add(CheckNewBadges());
+
+              // Level up detection
+              final points = state.profile['points'] as int? ?? 0;
+              final currentLevel = LevelUtils.getLevelInfo(points).level;
+
+              if (_lastKnownLevel != null && currentLevel > _lastKnownLevel!) {
+                final levelInfo = LevelUtils.getLevelInfo(points);
+                LevelUpPopup.show(
+                  context,
+                  level: levelInfo.level,
+                  title: levelInfo.title,
+                  icon: levelInfo.icon,
+                  pointsReward: 50,
+                  flashcardsCount: state.stats['flashcardCount'] ?? 0,
+                );
+              }
+              _lastKnownLevel = currentLevel;
+            }
+          },
+        ),
+        BlocListener<BadgeBloc, BadgeState>(
+          listener: (context, state) {
+            if (state is BadgeJustUnlocked) {
+              BadgeUnlockPopup.show(
+                context,
+                label: state.label,
+                emoji: state.emoji,
+                imagePath: state.imagePath,
+                color: state.color,
+              );
+            }
+          },
+        ),
+        BlocListener<DeckBloc, DeckState>(
+          listener: (context, state) {
+            if (state is DeckLoaded) {
+              context.read<BadgeBloc>().add(CheckNewBadges());
+            }
+          },
+        ),
+        BlocListener<QuizBloc, QuizState>(
+          listener: (context, state) {
+            if (state is QuizSubmitted) {
+              context.read<BadgeBloc>().add(CheckNewBadges());
+            }
+          },
+        ),
+      ],
       child: Scaffold(
         backgroundColor: AppColors.background,
         body: IndexedStack(
@@ -85,97 +146,97 @@ class _HomeScreenState extends State<HomeScreen> {
           children: _screens,
         ),
         bottomNavigationBar: SafeArea(
-        child: Container(
-          height: 80,
-          color: Colors.transparent,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              // Le fond blanc avec découpe incurvée (notch)
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: 65,
-                child: CustomPaint(
-                  painter: NotchedCardPainter(
-                    color: Colors.white,
-                    shadowColor: Colors.black.withOpacity(0.04),
-                  ),
-                ),
-              ),
-              // La ligne des icônes d'onglets avec les noms
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: 65,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _navItem(0, Icons.description_outlined, Icons.description_rounded, 'Accueil'),
-                    _navItem(1, Icons.auto_stories_outlined, Icons.auto_stories_rounded, 'Librairie'),
-                    const SizedBox(width: 60), // Espace central réservé au bouton
-                    _navItem(3, Icons.bookmark_outline_rounded, Icons.bookmark_rounded, 'Decks'),
-                    _navItem(4, Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
-                  ],
-                ),
-              ),
-              // Le point indicateur vert glissant (placé sous le texte)
-              Positioned(
-                bottom: 6,
-                left: 0,
-                right: 0,
-                child: AnimatedAlign(
-                  duration: const Duration(milliseconds: 320),
-                  curve: Curves.easeOutBack,
-                  alignment: Alignment(-0.8 + (_currentIndex * 0.4), 0.0),
-                  child: Container(
-                    width: 5,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
+          child: Container(
+            height: 80,
+            color: Colors.transparent,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Le fond blanc avec découpe incurvée (notch)
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  height: 65,
+                  child: CustomPaint(
+                    painter: NotchedCardPainter(
+                      color: Colors.white,
+                      shadowColor: Colors.black.withOpacity(0.04),
                     ),
                   ),
                 ),
-              ),
-              // Le grand bouton central vert encastré avec un "+"
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: GestureDetector(
-                    onTap: () => _showCreateOptions(context),
+                // La ligne des icônes d'onglets avec les noms
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  height: 65,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _navItem(0, Icons.description_outlined, Icons.description_rounded, 'Accueil'),
+                      _navItem(1, Icons.auto_stories_outlined, Icons.auto_stories_rounded, 'Librairie'),
+                      const SizedBox(width: 60), // Espace central réservé au bouton
+                      _navItem(3, Icons.bookmark_outline_rounded, Icons.bookmark_rounded, 'Decks'),
+                      _navItem(4, Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
+                    ],
+                  ),
+                ),
+                // Le point indicateur vert glissant (placé sous le texte)
+                Positioned(
+                  bottom: 6,
+                  left: 0,
+                  right: 0,
+                  child: AnimatedAlign(
+                    duration: const Duration(milliseconds: 320),
+                    curve: Curves.easeOutBack,
+                    alignment: Alignment(-0.8 + (_currentIndex * 0.4), 0.0),
                     child: Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
+                      width: 5,
+                      height: 5,
+                      decoration: const BoxDecoration(
                         color: AppColors.primary,
                         shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withOpacity(0.3),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.add_rounded, // Symbole "+" au milieu
-                        color: Colors.white,
-                        size: 28,
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+                // Le grand bouton central vert encastré avec un "+"
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: GestureDetector(
+                      onTap: () => _showCreateOptions(context),
+                      child: Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.add_rounded, // Symbole "+" au milieu
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
     );
   }
 
@@ -252,7 +313,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       withData: false,
                     );
 
-                    if (result != null && result.files.single != null) {
+                    if (result != null) {
                       final singleFile = result.files.single;
                       
                       if (!mounted) return;

@@ -15,7 +15,7 @@ class CameraOCRScreen extends StatefulWidget {
 
 class _CameraOCRScreenState extends State<CameraOCRScreen> {
   CameraController? _controller;
-  List<XFile> _capturedImages = [];
+  final List<XFile> _capturedImages = [];
   bool _isInitializing = true;
   final OCRService _ocrService = OCRService();
   final ImagePicker _picker = ImagePicker();
@@ -131,7 +131,7 @@ class _CameraOCRScreenState extends State<CameraOCRScreen> {
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () => Navigator.pop(context),
                 ),
-                Text(
+                const Text(
                   'Scanner un cours',
                   style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                 ),
@@ -163,7 +163,7 @@ class _CameraOCRScreenState extends State<CameraOCRScreen> {
                   itemCount: _capturedImages.length,
                   itemBuilder: (context, index) {
                     return Padding(
-                      padding: EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.only(right: 8),
                       child: Stack(
                         children: [
                           ClipRRect(
@@ -181,7 +181,7 @@ class _CameraOCRScreenState extends State<CameraOCRScreen> {
                               onTap: () => setState(() => _capturedImages.removeAt(index)),
                               child: Container(
                                 decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                                child: Icon(Icons.close, color: Colors.white, size: 16),
+                                child: const Icon(Icons.close, color: Colors.white, size: 16),
                               ),
                             ),
                           ),
@@ -202,22 +202,22 @@ class _CameraOCRScreenState extends State<CameraOCRScreen> {
               children: [
                 if (_capturedImages.isNotEmpty)
                   Padding(
-                    padding: EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.only(bottom: 16),
                     child: ElevatedButton(
                       onPressed: _processOCR,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
-                        padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                       ),
                       child: Text('Valider (${_capturedImages.length} photos)'),
                     ),
                   )
                 else
-                  Text(
+                  const Text(
                     'Place ton cours dans le cadre',
                     style: TextStyle(color: Colors.white, fontSize: 14),
                   ),
-                SizedBox(height: 24),
+                const SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -303,7 +303,7 @@ class _CameraOCRScreenState extends State<CameraOCRScreen> {
         angle: rotation,
         child: Container(
           width: 30, height: 30,
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             border: Border(
               top: BorderSide(color: AppColors.primary, width: 4),
               left: BorderSide(color: AppColors.primary, width: 4),

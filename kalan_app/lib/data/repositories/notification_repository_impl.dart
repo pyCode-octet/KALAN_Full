@@ -25,25 +25,23 @@ class NotificationRepositoryImpl implements NotificationRepository {
             .select()
             .eq('user_id', userId);
 
-        if (remoteData != null) {
-          for (var item in remoteData as List) {
-            // Insérer localement pour fusionner
-            await db.insert(
-              'notifications',
-              {
-                'id': item['id'],
-                'user_id': item['user_id'],
-                'type': item['type'],
-                'title': item['title'],
-                'message': item['message'],
-                'is_read': item['is_read'] == true ? 1 : 0,
-                'created_at': item['created_at'],
-              },
-              conflictAlgorithm: ConflictAlgorithm.replace,
-            );
-          }
+        for (var item in remoteData as List) {
+          // Insérer localement pour fusionner
+          await db.insert(
+            'notifications',
+            {
+              'id': item['id'],
+              'user_id': item['user_id'],
+              'type': item['type'],
+              'title': item['title'],
+              'message': item['message'],
+              'is_read': item['is_read'] == true ? 1 : 0,
+              'created_at': item['created_at'],
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
         }
-      } catch (e) {
+            } catch (e) {
         // En cas d'erreur de Supabase, on ignore silencieusement et utilise le cache local
       }
     }

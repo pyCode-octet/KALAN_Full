@@ -33,7 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 60),
                   _buildLogo(),
                   const SizedBox(height: 60),
-                  Text(
+                  const Text(
                     'Bon retour !',
                     textAlign: TextAlign.center,
                     style: TextStyle(
@@ -125,7 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         );
       },
-      child: Text(
+      child: const Text(
         'Pas encore de compte ? Inscris-toi ici',
         style: TextStyle(
           color: AppColors.primary,
