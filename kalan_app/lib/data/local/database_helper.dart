@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'dart:convert';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -253,22 +254,60 @@ class DatabaseHelper {
           'color': 0xFF854F0B,
           'emoji': '📜'
         },
+        {
+          'id': 'pousse',
+          'label': 'La Jeune Pousse',
+          'description': 'Passer son premier niveau',
+          'category': 'apprentissage',
+          'image_path': 'humanites/ideogram-v3.0_BADGE_Pousse_kalan.jpg',
+          'color': 0xFF2D6A2D,
+          'emoji': '🌱'
+        },
       ];
       for (var b in defaultBadges) {
         await db.insert('badges', b, conflictAlgorithm: ConflictAlgorithm.replace);
       }
     }
 
-    // Check if subjects are empty
+    // Assurer que le badge "pousse" est toujours présent
+    await db.insert('badges', {
+      'id': 'pousse',
+      'label': 'La Jeune Pousse',
+      'description': 'Passer son premier niveau',
+      'category': 'apprentissage',
+      'image_path': 'humanites/ideogram-v3.0_BADGE_Pousse_kalan.jpg',
+      'color': 0xFF2D6A2D,
+      'emoji': '🌱'
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+
+    // Migration des matières : conversion de l'ancien système granulaire
+    // vers le nouveau système généralisé (Sciences, Langues, Littérature, Humanités, Autre).
+    final oldSubjectsCheck = Sqflite.firstIntValue(
+      await db.rawQuery("SELECT COUNT(*) FROM subjects WHERE id IN ('Mathématiques', 'SVT', 'Français', 'Anglais', 'Histoire-Géo')")
+    ) ?? 0;
+
+    if (oldSubjectsCheck > 0) {
+      // 1. Mettre à jour les decks locaux vers les nouvelles catégories
+      await db.rawUpdate("UPDATE decks SET subject = 'Sciences' WHERE subject IN ('Mathématiques', 'SVT', 'Physique-Chimie', 'Informatique')");
+      await db.rawUpdate("UPDATE decks SET subject = 'Langues' WHERE subject IN ('Anglais')");
+      await db.rawUpdate("UPDATE decks SET subject = 'Littérature' WHERE subject IN ('Français')");
+      await db.rawUpdate("UPDATE decks SET subject = 'Humanités' WHERE subject IN ('Histoire-Géo')");
+      // Toutes les autres matières non reconnues passent en 'Autre'
+      await db.rawUpdate("UPDATE decks SET subject = 'Autre' WHERE subject NOT IN ('Sciences', 'Langues', 'Littérature', 'Humanités', 'Autre')");
+
+      // 2. Vider l'ancienne table des matières
+      await db.execute("DELETE FROM subjects");
+    }
+
+    // Seed les 5 nouvelles matières si la table est vide (première install ou suite à la suppression ci-dessus)
     final subjectsCount = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM subjects')) ?? 0;
     if (subjectsCount == 0) {
       final defaultSubjects = [
-        {'id': 'SVT', 'label': 'SVT', 'color': 0xFF2D6A2D, 'bg_color': 0xFFEAF3DE, 'icon_code': 0xf0204}, // biotech
-        {'id': 'Histoire-Géo', 'label': 'Histoire-Géo', 'color': 0xFF854F0B, 'bg_color': 0xFFFAEEDA, 'icon_code': 0xf011b}, // public
-        {'id': 'Mathématiques', 'label': 'Mathématiques', 'color': 0xFF185FA5, 'bg_color': 0xFFE6F1FB, 'icon_code': 0xf0809}, // functions
-        {'id': 'Physique-Chimie', 'label': 'Physique-Chimie', 'color': 0xFF6A2D9F, 'bg_color': 0xFFEEEDFE, 'icon_code': 0xf0178}, // science
-        {'id': 'Anglais', 'label': 'Anglais', 'color': 0xFFE07B39, 'bg_color': 0xFFFCEFE6, 'icon_code': 0xf06e4}, // language
-        {'id': 'Français', 'label': 'Français', 'color': 0xFFB00020, 'bg_color': 0xFFFDECEE, 'icon_code': 0xf05a1}, // menu_book
+        {'id': 'Sciences', 'label': 'Sciences', 'color': 0xFF009688, 'bg_color': 0xFFE0F2F1, 'icon_code': 0xe30a}, // computer/science (computer)
+        {'id': 'Langues', 'label': 'Langues', 'color': 0xFFE07B39, 'bg_color': 0xFFFCEFE6, 'icon_code': 0xf06e4}, // language (translate)
+        {'id': 'Littérature', 'label': 'Littérature', 'color': 0xFFB00020, 'bg_color': 0xFFFDECEE, 'icon_code': 0xf05a1}, // menu_book (menu_book)
+        {'id': 'Humanités', 'label': 'Humanités', 'color': 0xFF854F0B, 'bg_color': 0xFFFAEEDA, 'icon_code': 0xf011b}, // public (public)
+        {'id': 'Autre', 'label': 'Autre', 'color': 0xFF757575, 'bg_color': 0xFFF5F5F5, 'icon_code': 0xe87d}, // extension (puzzle)
       ];
       for (var s in defaultSubjects) {
         await db.insert('subjects', s, conflictAlgorithm: ConflictAlgorithm.replace);
@@ -501,6 +540,94 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  Future<void> unlockBadge(String userId, String badgeKey) async {
+    final db = await database;
+    
+    // Check if already unlocked to avoid duplicate insert/sync
+    final existing = await db.query(
+      'user_badges',
+      where: 'user_id = ? AND badge_key = ?',
+      whereArgs: [userId, badgeKey],
+    );
+    if (existing.isNotEmpty) return;
+
+    final nowStr = DateTime.now().toIso8601String();
+    
+    // 1. Insert local user_badge
+    await db.insert('user_badges', {
+      'user_id': userId,
+      'badge_key': badgeKey,
+      'unlocked_at': nowStr,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+
+    // 2. Add to sync queue for Supabase
+    await db.insert('sync_queue', {
+      'action': 'UNLOCK_BADGE',
+      'payload': jsonEncode({
+        'user_id': userId,
+        'badge_key': badgeKey,
+        'unlocked_at': nowStr,
+      }),
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+      'status': 'pending',
+      'created_at': nowStr,
+    });
+
+    // 3. Ajouter une notification automatique pour l'obtention du badge
+    final badgeMaps = await db.query('badges', columns: ['label'], where: 'id = ?', whereArgs: [badgeKey]);
+    String badgeName = badgeKey;
+    if (badgeMaps.isNotEmpty) {
+      badgeName = badgeMaps.first['label'] as String;
+    }
+
+    final String notifId = 'badge-$badgeKey-${DateTime.now().millisecondsSinceEpoch}';
+    final String notifTitle = 'Nouveau Badge ! 🏆';
+    final String notifMessage = 'Félicitations, tu as débloqué le badge "$badgeName" !';
+
+    final notificationPayload = {
+      'id': notifId,
+      'user_id': userId,
+      'type': 'badge',
+      'title': notifTitle,
+      'message': notifMessage,
+      'is_read': 0,
+      'created_at': nowStr,
+    };
+
+    await insertNotification(notificationPayload);
+
+    await db.insert('sync_queue', {
+      'action': 'CREATE_NOTIFICATION',
+      'payload': jsonEncode({
+        'id': notifId,
+        'user_id': userId,
+        'type': 'badge',
+        'title': notifTitle,
+        'message': notifMessage,
+        'is_read': false,
+        'created_at': nowStr,
+      }),
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+      'status': 'pending',
+      'created_at': nowStr,
+    });
+  }
+
+  Future<void> awardFlashcardBadgeIfFirst(String userId) async {
+    if (userId == 'guest' || userId.isEmpty) return;
+    
+    // Check if the user already has the "chercheur" badge
+    final db = await database;
+    final existing = await db.query(
+      'user_badges',
+      where: 'user_id = ? AND badge_key = ?',
+      whereArgs: [userId, 'chercheur'],
+    );
+    if (existing.isEmpty) {
+      await unlockBadge(userId, 'chercheur');
+    }
   }
 }
 

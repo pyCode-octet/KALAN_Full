@@ -117,6 +117,18 @@ class SyncService {
               await SupabaseService.client.from('user_badges').insert(payload);
               success = true;
               break;
+            case 'CREATE_NOTIFICATION':
+              await SupabaseService.client.from('notifications').insert(payload);
+              success = true;
+              break;
+            case 'MARK_NOTIFICATION_READ':
+              await SupabaseService.client.from('notifications').update({'is_read': true}).eq('id', payload['id']);
+              success = true;
+              break;
+            case 'MARK_ALL_NOTIFICATIONS_READ':
+              await SupabaseService.client.from('notifications').update({'is_read': true}).eq('user_id', payload['user_id']);
+              success = true;
+              break;
             default:
               debugPrint('Action inconnue dans sync_queue: $action');
               success = true; // Mark as success to skip it

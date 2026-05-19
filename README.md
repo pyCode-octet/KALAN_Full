@@ -36,6 +36,9 @@ flutter pub get
 flutter run
 ```
 
+### 4. Configurer l'IA (Online & Offline)
+Toutes les instructions pour connecter l'IA **Qwen (en ligne)** et savoir comment l'IA **Gemma (hors ligne)** se télécharge et s'exécute automatiquement sur le smartphone sont détaillées dans le [Guide de l'IA de l'Application](kalan_app/README.md).
+
 ---
 
 ## 🗄️ Base de données (Supabase)

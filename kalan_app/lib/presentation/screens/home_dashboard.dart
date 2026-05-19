@@ -10,6 +10,9 @@ import 'deck_list_screen.dart';
 import 'badges_screen.dart';
 import 'notification_screen.dart';
 import '../../data/local/database_helper.dart';
+import 'roadmap_screen.dart';
+import '../blocs/notification/notification_bloc.dart';
+import '../blocs/notification/notification_state.dart';
 
 class HomeDashboard extends StatelessWidget {
   const HomeDashboard({super.key});
@@ -18,7 +21,7 @@ class HomeDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Theme(
       data: Theme.of(context).copyWith(
-        textTheme: GoogleFonts.plusJakartaSansTextTheme(Theme.of(context).textTheme),
+        textTheme: GoogleFonts.fredokaTextTheme(Theme.of(context).textTheme),
       ),
       child: Scaffold(
         backgroundColor: Colors.white,
@@ -40,7 +43,7 @@ class HomeDashboard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildHeader(context, profile),
-                      _buildLevelCard(levelInfo, points),
+                      _buildLevelCard(context, levelInfo, points),
                       _buildStatsGrid(context, stats, profile),
                       if (userBadges.isNotEmpty) _buildBadgesSection(context, userBadges),
                       _buildRecentActivitySection(context, recentDecks),
@@ -79,31 +82,39 @@ class HomeDashboard extends StatelessWidget {
           ),
           Row(
             children: [
-              Stack(
-                children: [
-                  IconButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const NotificationScreen()),
-                      );
-                    },
-                    icon: const Icon(Icons.notifications_none_rounded, size: 26, color: Color(0xFF1A1A1A)),
-                  ),
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE24B4A),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
+              BlocBuilder<NotificationBloc, NotificationState>(
+                builder: (context, notificationState) {
+                  final bool hasUnread = notificationState is NotificationLoaded &&
+                      notificationState.notifications.any((n) => n['is_read'] == 0);
+                  
+                  return Stack(
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const NotificationScreen()),
+                          );
+                        },
+                        icon: const Icon(Icons.notifications_none_rounded, size: 26, color: Color(0xFF1A1A1A)),
                       ),
-                    ),
-                  ),
-                ],
+                      if (hasUnread)
+                        Positioned(
+                          top: 12,
+                          right: 12,
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE24B4A),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 1.5),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(width: 8),
               _buildAvatar(profile),
@@ -138,11 +149,18 @@ class HomeDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildLevelCard(LevelInfo levelInfo, int points) {
+  Widget _buildLevelCard(BuildContext context, LevelInfo levelInfo, int points) {
     final progress = (points / levelInfo.nextLevelPoints).clamp(0.0, 1.0);
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const RoadmapScreen()),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -214,8 +232,9 @@ class HomeDashboard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildStatsGrid(BuildContext context, Map<String, dynamic> stats, Map<String, dynamic> profile) {
     final deckCount = stats['deckCount'] ?? 0;
@@ -448,6 +467,10 @@ class HomeDashboard extends StatelessWidget {
         return const Color(0xFFB00020);
       case 'histoire-géo':
         return const Color(0xFF854F0B);
+      case 'informatique':
+        return const Color(0xFF009688);
+      case 'autre':
+        return const Color(0xFF757575);
       default:
         return const Color(0xFF2D6A2D);
     }

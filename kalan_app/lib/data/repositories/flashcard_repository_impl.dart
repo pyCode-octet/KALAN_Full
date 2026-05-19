@@ -96,6 +96,15 @@ class FlashcardRepositoryImpl implements FlashcardRepository {
     // 1. Local
     await db.insert('flashcards', model.toMap());
 
+    // Check and award badge
+    final deckMaps = await db.query('decks', columns: ['user_id'], where: 'uuid = ?', whereArgs: [deckUuid]);
+    if (deckMaps.isNotEmpty) {
+      final userId = deckMaps.first['user_id'] as String?;
+      if (userId != null) {
+        await _dbHelper.awardFlashcardBadgeIfFirst(userId);
+      }
+    }
+
     // 2. Sync
     final supabasePayload = model.toSupabaseJson();
     // For Supabase, deck_id is already the deckUuid in our model

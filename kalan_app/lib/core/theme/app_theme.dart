@@ -38,7 +38,7 @@ class AppTheme {
           foregroundColor: AppColors.onPrimary,
           minimumSize: const Size(0, 48),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          textStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
+          textStyle: GoogleFonts.fredoka(fontWeight: FontWeight.bold),
         ),
       ),
       cardTheme: CardThemeData(
@@ -47,13 +47,13 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       ),
-      textTheme: GoogleFonts.plusJakartaSansTextTheme(
+      textTheme: GoogleFonts.fredokaTextTheme(
         TextTheme(
-          displayLarge: GoogleFonts.plusJakartaSans(fontSize: 32, fontWeight: FontWeight.bold, color: onBg),
-          titleLarge: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w600, color: onBg),
-          titleMedium: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w600, color: onBg),
-          bodyLarge: GoogleFonts.plusJakartaSans(fontSize: 16, color: onBg),
-          bodyMedium: GoogleFonts.plusJakartaSans(fontSize: 14, color: onBg),
+          displayLarge: GoogleFonts.fredoka(fontSize: 32, fontWeight: FontWeight.bold, color: onBg),
+          titleLarge: GoogleFonts.fredoka(fontSize: 22, fontWeight: FontWeight.w600, color: onBg),
+          titleMedium: GoogleFonts.fredoka(fontSize: 18, fontWeight: FontWeight.w600, color: onBg),
+          bodyLarge: GoogleFonts.fredoka(fontSize: 16, color: onBg),
+          bodyMedium: GoogleFonts.fredoka(fontSize: 14, color: onBg),
         ),
       ),
     );

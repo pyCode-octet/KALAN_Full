@@ -57,7 +57,7 @@ void main() async {
   final userRepo = UserRepositoryImpl(dbHelper, connectivity);
   final badgeRepo = BadgeRepositoryImpl(dbHelper, connectivity);
   final leaderboardRepo = LeaderboardRepositoryImpl(dbHelper, connectivity);
-  final notificationRepo = NotificationRepositoryImpl();
+  final notificationRepo = NotificationRepositoryImpl(dbHelper, connectivity);
 
   if (SupabaseService.currentUser != null) {
     SyncService.instance.init();

@@ -19,7 +19,7 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
-  String _selectedSubject = 'Mathématiques';
+  String _selectedSubject = 'Sciences';
   String _selectedLevel = '3ème';
   bool _isGenerating = false;
   List<Map<String, String>> _generatedCards = [];
@@ -64,7 +64,7 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
   Widget build(BuildContext context) {
     return Theme(
       data: Theme.of(context).copyWith(
-        textTheme: GoogleFonts.plusJakartaSansTextTheme(Theme.of(context).textTheme),
+        textTheme: GoogleFonts.fredokaTextTheme(Theme.of(context).textTheme),
       ),
       child: Scaffold(
         backgroundColor: Colors.white,

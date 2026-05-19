@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:kalan_app/core/theme/app_theme.dart';
+
+// Constantes de style locales et constantes de compilation pour éviter les erreurs Dart
+const Color _primaryColor = Color(0xFF2D6A2D);
+const Color _textPrimary = Color(0xFF1F2937);
+const Color _textSecondary = Color(0xFF4B5563);
+const Color _background = Color(0xFFFDFCF8);
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -8,19 +13,19 @@ class AboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: _background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: _background,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'À propos de KALAN',
           style: TextStyle(
-            color: AppColors.textPrimary,
+            color: _textPrimary,
             fontWeight: FontWeight.w800,
             fontSize: 18,
           ),
@@ -40,7 +45,7 @@ class AboutScreen extends StatelessWidget {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: _primaryColor.withOpacity(0.1),
                     blurRadius: 30,
                     offset: const Offset(0, 10),
                   ),
@@ -53,7 +58,7 @@ class AboutScreen extends StatelessWidget {
                 placeholderBuilder: (context) => const Icon(
                   Icons.menu_book_rounded,
                   size: 80,
-                  color: AppColors.primary,
+                  color: _primaryColor,
                 ),
               ),
             ),
@@ -63,7 +68,7 @@ class AboutScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.w900,
-                color: AppColors.primary,
+                color: _primaryColor,
                 letterSpacing: 1.2,
               ),
             ),
@@ -71,7 +76,7 @@ class AboutScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: _primaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Text(
@@ -79,7 +84,7 @@ class AboutScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
+                  color: _primaryColor,
                 ),
               ),
             ),
@@ -118,7 +123,7 @@ class AboutScreen extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: AppColors.textSecondary,
+                color: _textSecondary,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -168,7 +173,7 @@ class AboutScreen extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+                    color: _textPrimary,
                   ),
                 ),
               ),
@@ -180,7 +185,7 @@ class AboutScreen extends StatelessWidget {
             style: const TextStyle(
               fontSize: 15,
               height: 1.5,
-              color: AppColors.textSecondary,
+              color: _textSecondary,
             ),
           ),
         ],
@@ -194,10 +199,10 @@ class AboutScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2), width: 1),
+        border: Border.all(color: _primaryColor.withOpacity(0.2), width: 1),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.05),
+            color: _primaryColor.withOpacity(0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -211,10 +216,10 @@ class AboutScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: _primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.psychology_rounded, color: AppColors.primary, size: 24),
+                child: const Icon(Icons.psychology_rounded, color: _primaryColor, size: 24),
               ),
               const SizedBox(width: 16),
               const Expanded(
@@ -223,7 +228,7 @@ class AboutScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+                    color: _textPrimary,
                   ),
                 ),
               ),
@@ -248,7 +253,7 @@ class AboutScreen extends StatelessWidget {
           width: 24,
           height: 24,
           decoration: const BoxDecoration(
-            color: AppColors.primary,
+            color: _primaryColor,
             shape: BoxShape.circle,
           ),
           child: Center(
@@ -269,7 +274,7 @@ class AboutScreen extends StatelessWidget {
             style: const TextStyle(
               fontSize: 15,
               height: 1.4,
-              color: AppColors.textSecondary,
+              color: _textSecondary,
               fontWeight: FontWeight.w500,
             ),
           ),

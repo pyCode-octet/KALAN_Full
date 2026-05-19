@@ -151,36 +151,40 @@ class DeckRepositoryImpl implements DeckRepository {
           'created_at': DateTime.now().toIso8601String(),
         });
 
-        // Sync carte si online
-        if (await _connectivity.isOnline() && user != null) {
-          try {
-            await SupabaseService.client.from('flashcards').insert({
+        // Sync carte en arrière-plan (non-bloquant)
+        _connectivity.isOnline().then((isOnline) {
+          if (isOnline && user != null) {
+            SupabaseService.client.from('flashcards').insert({
               'uuid': cardUuid,
               'deck_id': deckUuid,
               'question': card['question'],
               'answer': card['answer'],
               'difficulty': 0,
+            }).catchError((e) {
+              _addToSyncQueue('CREATE_FLASHCARD', {'uuid': cardUuid, 'deck_id': deckUuid, 'question': card['question'], 'answer': card['answer']});
             });
-          } catch (e) {
-            await _addToSyncQueue('CREATE_FLASHCARD', {'uuid': cardUuid, 'deck_id': deckUuid, 'question': card['question'], 'answer': card['answer']});
+          } else {
+            _addToSyncQueue('CREATE_FLASHCARD', {'uuid': cardUuid, 'deck_id': deckUuid, 'question': card['question'], 'answer': card['answer']});
           }
-        } else {
-          await _addToSyncQueue('CREATE_FLASHCARD', {'uuid': cardUuid, 'deck_id': deckUuid, 'question': card['question'], 'answer': card['answer']});
-        }
+        });
       }
+
+      // Première génération de fiches : débloquer le badge chercheur
+      await _dbHelper.awardFlashcardBadgeIfFirst(currentUserId);
     }
 
-    // 3. Sync Deck Supabase si online
-    if (await _connectivity.isOnline() && user != null) {
-      try {
-        await SupabaseService.client.from('decks').insert(model.toSupabaseJson());
-        await db.update('decks', {'is_synced': 1}, where: 'uuid = ?', whereArgs: [deckUuid]);
-      } catch (e) {
-        await _addToSyncQueue('CREATE_DECK', model.toSupabaseJson());
+    // 3. Sync Deck Supabase en arrière-plan (non-bloquant)
+    _connectivity.isOnline().then((isOnline) {
+      if (isOnline && user != null) {
+        SupabaseService.client.from('decks').insert(model.toSupabaseJson()).then((_) {
+          db.update('decks', {'is_synced': 1}, where: 'uuid = ?', whereArgs: [deckUuid]);
+        }).catchError((e) {
+          _addToSyncQueue('CREATE_DECK', model.toSupabaseJson());
+        });
+      } else {
+        _addToSyncQueue('CREATE_DECK', model.toSupabaseJson());
       }
-    } else {
-      await _addToSyncQueue('CREATE_DECK', model.toSupabaseJson());
-    }
+    });
   }
 
   @override

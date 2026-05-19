@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:kalan_app/presentation/screens/settings_screen.dart';
+import 'package:kalan_app/presentation/widgets/ai_status_indicator.dart';
 import '../../core/constants/app_colors.dart';
 import '../blocs/deck/deck_bloc.dart';
 import '../blocs/deck/deck_event.dart';
@@ -23,6 +24,10 @@ class DeckListScreen extends StatelessWidget {
       'Histoire-Géo': {'color': const Color(0xFF854F0B), 'bg': const Color(0xFFFAEEDA), 'icon': Icons.public_rounded},
       'Mathématiques': {'color': const Color(0xFF185FA5), 'bg': const Color(0xFFE6F1FB), 'icon': Icons.functions_rounded},
       'Physique-Chimie': {'color': const Color(0xFF6A2D9F), 'bg': const Color(0xFFEEEDFE), 'icon': Icons.science_rounded},
+      'Anglais': {'color': const Color(0xFFE07B39), 'bg': const Color(0xFFFCEFE6), 'icon': Icons.translate_rounded},
+      'Français': {'color': const Color(0xFFB00020), 'bg': const Color(0xFFFDECEE), 'icon': Icons.menu_book_rounded},
+      'Informatique': {'color': const Color(0xFF009688), 'bg': const Color(0xFFE0F2F1), 'icon': Icons.computer_rounded},
+      'Autre': {'color': const Color(0xFF757575), 'bg': const Color(0xFFF5F5F5), 'icon': Icons.extension_rounded},
     };
 
     return Scaffold(
@@ -32,6 +37,7 @@ class DeckListScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         foregroundColor: AppColors.onBackground,
         actions: [
+          const AIStatusIndicator(),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())),

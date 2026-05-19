@@ -23,18 +23,28 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  String _reminderTime = '19:00';
+
   @override
   void initState() {
     super.initState();
     // Refresh profile and stats when entering the screen
     context.read<UserBloc>().add(LoadUserProfile());
+    _loadReminderTime();
+  }
+
+  Future<void> _loadReminderTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _reminderTime = prefs.getString('reminder_time') ?? '19:00';
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Theme(
       data: Theme.of(context).copyWith(
-        textTheme: GoogleFonts.plusJakartaSansTextTheme(Theme.of(context).textTheme),
+        textTheme: GoogleFonts.fredokaTextTheme(Theme.of(context).textTheme),
       ),
       child: Scaffold(
         backgroundColor: Colors.white,
@@ -99,7 +109,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(width: 8),
               Text(
                 'KALAN',
-                style: GoogleFonts.plusJakartaSans(
+                style: GoogleFonts.fredoka(
                   color: const Color(0xFF1A4D2E),
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
@@ -533,6 +543,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 defaultValue: true,
               ),
               _SettingItem(
+                icon: Icons.access_time_rounded,
+                iconBg: const Color(0xFFFFF7ED),
+                title: 'Heure de révision',
+                subtitle: 'Rappel programmé à $_reminderTime',
+                prefKey: 'reminder_time_action',
+                defaultValue: true,
+                isAction: true,
+                onTap: () => _selectReminderTime(context),
+              ),
+              _SettingItem(
                 icon: Icons.info_outline_rounded,
                 iconBg: Color(0xFFF3F4F6),
                 title: 'À propos',
@@ -552,6 +572,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ],
     );
+  }
+
+  Future<void> _selectReminderTime(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    final timeParts = _reminderTime.split(':');
+    final initialTime = TimeOfDay(
+      hour: int.parse(timeParts[0]),
+      minute: int.parse(timeParts[1]),
+    );
+    
+    final selectedTime = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF2E7D32),
+              onPrimary: Colors.white,
+              onSurface: Color(0xFF111111),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (selectedTime != null) {
+      final formattedTime = '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
+      await prefs.setString('reminder_time', formattedTime);
+      setState(() {
+        _reminderTime = formattedTime;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Rappel programmé à $formattedTime ✓'),
+            backgroundColor: const Color(0xFF2E7D32),
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildEmptyState(String text, IconData icon) {

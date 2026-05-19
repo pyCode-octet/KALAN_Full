@@ -58,7 +58,7 @@ class _WelcomeCarouselScreenState extends State<WelcomeCarouselScreen> {
                         Text(
                           _pages[index]['title']!,
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.plusJakartaSans(
+                          style: GoogleFonts.fredoka(
                             fontSize: 32,
                             fontWeight: FontWeight.w900,
                             color: AppColors.primary,
@@ -68,7 +68,7 @@ class _WelcomeCarouselScreenState extends State<WelcomeCarouselScreen> {
                         Text(
                           _pages[index]['description']!,
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.plusJakartaSans(
+                          style: GoogleFonts.fredoka(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF8A7A58),

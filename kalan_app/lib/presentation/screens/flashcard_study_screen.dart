@@ -93,10 +93,14 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
                   Expanded(
                     child: GestureDetector(
                       onTap: () {
-                        if (!_showAnswer) {
-                          _timer?.cancel();
-                          setState(() => _showAnswer = true);
+                        // Pas de retournement manuel avant la fin des 5 secondes (le minuteur s'occupe de révéler la réponse).
+                        // Après 5s (_showAnswer est true), on pourrait permettre de retourner la carte
+                        // pour revoir la question, mais l'utilisateur a demandé de commenter cette partie pour l'instant.
+                        /*
+                        if (_showAnswer) {
+                          setState(() => _showAnswer = false);
                         }
+                        */
                       },
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 300),

@@ -193,6 +193,44 @@ class UserRepositoryImpl implements UserRepository {
     int newLevel = (newPoints / 100).floor() + 1;
     if (newLevel < 1) newLevel = 1;
 
+    final currentLevel = profile['level'] as int? ?? 1;
+    if (currentLevel == 1 && newLevel >= 2) {
+      await _dbHelper.unlockBadge(userId, 'pousse');
+    }
+
+    if (newLevel > currentLevel) {
+      final nowStr = DateTime.now().toIso8601String();
+      final notifId = 'levelup-$newLevel-${DateTime.now().millisecondsSinceEpoch}';
+      
+      final notificationPayload = {
+        'id': notifId,
+        'user_id': userId,
+        'type': 'leaderboard',
+        'title': 'Niveau Supérieur ! 🎉',
+        'message': 'Bravo ! Tu as atteint le niveau $newLevel.',
+        'is_read': 0,
+        'created_at': nowStr,
+      };
+
+      await _dbHelper.insertNotification(notificationPayload);
+
+      await db.insert('sync_queue', {
+        'action': 'CREATE_NOTIFICATION',
+        'payload': jsonEncode({
+          'id': notifId,
+          'user_id': userId,
+          'type': 'leaderboard',
+          'title': 'Niveau Supérieur ! 🎉',
+          'message': 'Bravo ! Tu as atteint le niveau $newLevel.',
+          'is_read': false,
+          'created_at': nowStr,
+        }),
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+        'status': 'pending',
+        'created_at': nowStr,
+      });
+    }
+
     // --- Streak Logic ---
     int currentStreak = profile['streak'] as int? ?? 0;
     final String? lastActiveStr = profile['last_active']?.toString();

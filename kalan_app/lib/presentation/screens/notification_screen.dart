@@ -27,13 +27,14 @@ class _NotificationScreenState extends State<NotificationScreen> with TickerProv
       duration: const Duration(seconds: 20),
     )..repeat();
 
-    // Charger les vraies notifications de l'utilisateur connecté
+    // Charger les notifications dès le démarrage
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final userState = context.read<UserBloc>().state;
+      String userId = 'guest';
       if (userState is UserLoaded) {
-        final userId = userState.profile['uuid'] ?? 'guest';
-        context.read<NotificationBloc>().add(LoadNotifications(userId));
+        userId = userState.profile['uuid'] ?? 'guest';
       }
+      context.read<NotificationBloc>().add(LoadNotifications(userId));
     });
   }
 
@@ -99,56 +100,64 @@ class _NotificationScreenState extends State<NotificationScreen> with TickerProv
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFDFCF8),
-      body: Stack(
-        children: [
-          // Arrière-plan avec filigranes animés
-          Positioned.fill(
-            child: AnimatedBuilder(
-              animation: _animationController,
-              builder: (context, child) {
-                return CustomPaint(
-                  painter: AfricanWatermarkPainter(progress: _animationController.value),
-                );
-              },
+      body: BlocListener<UserBloc, UserState>(
+        listener: (context, userState) {
+          if (userState is UserLoaded) {
+            final userId = userState.profile['uuid'] ?? 'guest';
+            context.read<NotificationBloc>().add(LoadNotifications(userId));
+          }
+        },
+        child: Stack(
+          children: [
+            // Arrière-plan avec filigranes animés
+            Positioned.fill(
+              child: AnimatedBuilder(
+                animation: _animationController,
+                builder: (context, child) {
+                  return CustomPaint(
+                    painter: AfricanWatermarkPainter(progress: _animationController.value),
+                  );
+                },
+              ),
             ),
-          ),
-
-          // Contenu principal
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                BlocBuilder<NotificationBloc, NotificationState>(
-                  builder: (context, state) {
-                    final notifications = state is NotificationLoaded ? state.notifications : [];
-                    final hasUnread = notifications.any((n) => n['is_read'] == 0);
-                    return _buildHeader(context, hasUnread);
-                  },
-                ),
-                Expanded(
-                  child: BlocBuilder<NotificationBloc, NotificationState>(
+  
+            // Contenu principal
+            SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  BlocBuilder<NotificationBloc, NotificationState>(
                     builder: (context, state) {
-                      if (state is NotificationLoading) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      if (state is NotificationError) {
-                        return Center(child: Text(state.message));
-                      }
-                      if (state is NotificationLoaded) {
-                        final list = state.notifications;
-                        if (list.isEmpty) {
-                          return _buildEmptyState();
-                        }
-                        return _buildNotificationList(list);
-                      }
-                      return const SizedBox.shrink();
+                      final notifications = state is NotificationLoaded ? state.notifications : [];
+                      final hasUnread = notifications.any((n) => n['is_read'] == 0);
+                      return _buildHeader(context, hasUnread);
                     },
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: BlocBuilder<NotificationBloc, NotificationState>(
+                      builder: (context, state) {
+                        if (state is NotificationLoading) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        if (state is NotificationError) {
+                          return Center(child: Text(state.message));
+                        }
+                        if (state is NotificationLoaded) {
+                          final list = state.notifications;
+                          if (list.isEmpty) {
+                            return _buildEmptyState();
+                          }
+                          return _buildNotificationList(list);
+                        }
+                        return const Center(child: CircularProgressIndicator());
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -182,7 +191,7 @@ class _NotificationScreenState extends State<NotificationScreen> with TickerProv
               const SizedBox(width: 16),
               Text(
                 'Notifications',
-                style: GoogleFonts.plusJakartaSans(
+                style: GoogleFonts.fredoka(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
                   color: const Color(0xFF1A4D2E),
@@ -201,7 +210,7 @@ class _NotificationScreenState extends State<NotificationScreen> with TickerProv
               },
               child: Text(
                 'Tout lire',
-                style: GoogleFonts.plusJakartaSans(
+                style: GoogleFonts.fredoka(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
@@ -292,7 +301,7 @@ class _NotificationScreenState extends State<NotificationScreen> with TickerProv
                       children: [
                         Text(
                           notification['title'],
-                          style: GoogleFonts.plusJakartaSans(
+                          style: GoogleFonts.fredoka(
                             fontWeight: FontWeight.w800,
                             fontSize: 15,
                             color: const Color(0xFF1A1A1A),
@@ -301,7 +310,7 @@ class _NotificationScreenState extends State<NotificationScreen> with TickerProv
                         const SizedBox(height: 4),
                         Text(
                           notification['message'],
-                          style: GoogleFonts.plusJakartaSans(
+                          style: GoogleFonts.fredoka(
                             fontSize: 13,
                             color: const Color(0xFF666666),
                             height: 1.4,
@@ -310,7 +319,7 @@ class _NotificationScreenState extends State<NotificationScreen> with TickerProv
                         const SizedBox(height: 8),
                         Text(
                           notification['time'],
-                          style: GoogleFonts.plusJakartaSans(
+                          style: GoogleFonts.fredoka(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFFAAAAAA),
@@ -344,7 +353,7 @@ class _NotificationScreenState extends State<NotificationScreen> with TickerProv
           const SizedBox(height: 24),
           Text(
             'Tout est calme ici',
-            style: GoogleFonts.plusJakartaSans(
+            style: GoogleFonts.fredoka(
               fontSize: 18,
               fontWeight: FontWeight.w800,
               color: const Color(0xFF1A4D2E),
@@ -353,7 +362,7 @@ class _NotificationScreenState extends State<NotificationScreen> with TickerProv
           const SizedBox(height: 8),
           Text(
             'Reviens plus tard pour tes rappels.',
-            style: GoogleFonts.plusJakartaSans(
+            style: GoogleFonts.fredoka(
               fontSize: 14,
               color: const Color(0xFF666666),
             ),

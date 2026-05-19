@@ -13,7 +13,6 @@ class GemmaService {
     if (_model != null) return;
     try {
       _model = await _plugin.createModel(modelType: ModelType.gemmaIt, maxTokens: maxTokens);
-      _session = await _model!.createSession(temperature: 0.7, topK: 1);
     } catch (e) {
       debugPrint('Error loading Gemma model: $e');
       rethrow;
@@ -21,11 +20,16 @@ class GemmaService {
   }
 
   Future<String> generateText(String prompt, {int maxTokens = 512}) async {
-    if (_model == null || _session == null) {
+    if (_model == null) {
       await loadModel(maxTokens: maxTokens);
     }
 
+    // Toujours recréer la session pour éviter l'accumulation de l'historique (contexte saturé)
+    // et utiliser une température très basse (0.1) pour forcer un français correct et sans hallucination
     try {
+      await _session?.close();
+      _session = await _model!.createSession(temperature: 0.1, topK: 1);
+      
       await _session!.addQueryChunk(Message.text(text: prompt, isUser: true));
       final result = await _session!.getResponse();
       return result;

@@ -3,6 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/constants/app_colors.dart';
 import '../blocs/user/user_bloc.dart';
 import '../blocs/user/user_event.dart';
+import '../blocs/user/user_state.dart';
+import '../blocs/notification/notification_bloc.dart';
+import '../blocs/notification/notification_event.dart';
 import 'home_dashboard.dart';
 import 'library_screen.dart';
 import 'profile_screen.dart';
@@ -68,57 +71,111 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: const Color(0xFFE0D8CC), width: 0.5)),
+    return BlocListener<UserBloc, UserState>(
+      listener: (context, state) {
+        if (state is UserLoaded) {
+          final userId = state.profile['uuid'] ?? 'guest';
+          context.read<NotificationBloc>().add(LoadNotifications(userId));
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: IndexedStack(
+          index: _currentIndex,
+          children: _screens,
         ),
-        child: SafeArea(
-          child: SizedBox(
-            height: 65,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _navItem(0, Icons.home_outlined, Icons.home_rounded, 'Accueil'),
-                _navItem(1, Icons.library_books_outlined, Icons.library_books_rounded, 'Librairie'),
-                _buildCenterButton(),
-                _navItem(3, Icons.layers_outlined, Icons.layers_rounded, 'Decks'),
-                _navItem(4, Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
-              ],
-            ),
+        bottomNavigationBar: SafeArea(
+        child: Container(
+          height: 80,
+          color: Colors.transparent,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Le fond blanc avec découpe incurvée (notch)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 65,
+                child: CustomPaint(
+                  painter: NotchedCardPainter(
+                    color: Colors.white,
+                    shadowColor: Colors.black.withOpacity(0.04),
+                  ),
+                ),
+              ),
+              // La ligne des icônes d'onglets avec les noms
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 65,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _navItem(0, Icons.description_outlined, Icons.description_rounded, 'Accueil'),
+                    _navItem(1, Icons.auto_stories_outlined, Icons.auto_stories_rounded, 'Librairie'),
+                    const SizedBox(width: 60), // Espace central réservé au bouton
+                    _navItem(3, Icons.bookmark_outline_rounded, Icons.bookmark_rounded, 'Decks'),
+                    _navItem(4, Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
+                  ],
+                ),
+              ),
+              // Le point indicateur vert glissant (placé sous le texte)
+              Positioned(
+                bottom: 6,
+                left: 0,
+                right: 0,
+                child: AnimatedAlign(
+                  duration: const Duration(milliseconds: 320),
+                  curve: Curves.easeOutBack,
+                  alignment: Alignment(-0.8 + (_currentIndex * 0.4), 0.0),
+                  child: Container(
+                    width: 5,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ),
+              // Le grand bouton central vert encastré avec un "+"
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () => _showCreateOptions(context),
+                    child: Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.add_rounded, // Symbole "+" au milieu
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildCenterButton() {
-    return GestureDetector(
-      onTap: () => _showCreateOptions(context),
-      child: Container(
-        width: 52,
-        height: 52,
-        margin: const EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(
-          color: AppColors.primary,
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white, width: 4),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.3),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: const Icon(Icons.add_rounded, color: Colors.white, size: 30),
-      ),
+    ),
     );
   }
 
@@ -293,10 +350,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final isSelected = _currentIndex == index;
     return InkWell(
       onTap: () => setState(() => _currentIndex = index),
+      borderRadius: BorderRadius.circular(20),
       child: SizedBox(
         width: 60,
+        height: 65,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
@@ -304,7 +362,7 @@ class _HomeScreenState extends State<HomeScreen> {
               color: isSelected ? AppColors.primary : const Color(0xFFB0A89A),
               size: 22,
             ),
-            SizedBox(height: 2),
+            const SizedBox(height: 2),
             Text(
               label,
               style: TextStyle(
@@ -318,4 +376,68 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
+
+class NotchedCardPainter extends CustomPainter {
+  final Color color;
+  final Color shadowColor;
+
+  NotchedCardPainter({required this.color, required this.shadowColor});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final shadowPaint = Paint()
+      ..color = shadowColor
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+
+    final path = Path();
+    
+    // Coins supérieurs de la barre (effet arrondi moderne)
+    const double topRadius = 24;
+    
+    path.moveTo(0, topRadius);
+    path.quadraticBezierTo(0, 0, topRadius, 0);
+    
+    double centerX = size.width / 2;
+    double notchWidth = 85;
+    double notchHeight = 28;
+    
+    double startX = centerX - 45;
+    double endX = centerX + 45;
+    
+    path.lineTo(startX, 0);
+    
+    // Courbe de Bézier cubique pour une encoche centrale ultra-fluide (effet notch)
+    path.cubicTo(
+      centerX - 25, 0,
+      centerX - 22, notchHeight,
+      centerX, notchHeight,
+    );
+    path.cubicTo(
+      centerX + 22, notchHeight,
+      centerX + 25, 0,
+      endX, 0,
+    );
+    
+    path.lineTo(size.width - topRadius, 0);
+    path.quadraticBezierTo(size.width, 0, size.width, topRadius);
+    
+    // Lignes du bas
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
+
+    // Peindre l'ombre au-dessus
+    canvas.drawPath(path.shift(const Offset(0, -3)), shadowPaint);
+    
+    // Peindre la forme de la barre
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
