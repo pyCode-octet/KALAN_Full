@@ -19,7 +19,7 @@ import '../../core/utils/level_utils.dart';
 import 'home_dashboard.dart';
 import 'library_screen.dart';
 import 'profile_screen.dart';
-import 'deck_list_screen.dart';
+import 'leaderboard_screen.dart';
 import 'create_deck_screen.dart';
 import 'camera_ocr_screen.dart';
 import 'generating_screen.dart';
@@ -76,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
     const HomeDashboard(),
     const LibraryScreen(),
     const CreateDeckScreen(), 
-    const DeckListScreen(),
+    const LeaderboardScreen(),
     const ProfileScreen(),
   ];
 
@@ -161,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: CustomPaint(
                     painter: NotchedCardPainter(
                       color: Colors.white,
-                      shadowColor: Colors.black.withOpacity(0.04),
+                      shadowColor: Colors.black.withValues(alpha: 0.04),
                     ),
                   ),
                 ),
@@ -177,7 +177,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       _navItem(0, Icons.description_outlined, Icons.description_rounded, 'Accueil'),
                       _navItem(1, Icons.auto_stories_outlined, Icons.auto_stories_rounded, 'Librairie'),
                       const SizedBox(width: 60), // Espace central réservé au bouton
-                      _navItem(3, Icons.bookmark_outline_rounded, Icons.bookmark_rounded, 'Decks'),
+                      _navItem(3, Icons.emoji_events_outlined, Icons.emoji_events_rounded, 'Niveau'),
                       _navItem(4, Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
                     ],
                   ),
@@ -217,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.primary.withOpacity(0.3),
+                              color: AppColors.primary.withValues(alpha: 0.3),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -464,7 +464,6 @@ class NotchedCardPainter extends CustomPainter {
     path.quadraticBezierTo(0, 0, topRadius, 0);
     
     double centerX = size.width / 2;
-    double notchWidth = 85;
     double notchHeight = 28;
     
     double startX = centerX - 45;

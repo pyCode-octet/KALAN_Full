@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -22,10 +23,10 @@ class HomeDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Theme(
       data: Theme.of(context).copyWith(
-        textTheme: GoogleFonts.fredokaTextTheme(Theme.of(context).textTheme),
+        textTheme: GoogleFonts.plusJakartaSansTextTheme(Theme.of(context).textTheme),
       ),
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF5F2EA),
         body: BlocBuilder<UserBloc, UserState>(
           builder: (context, state) {
             if (state is UserLoading) return const Center(child: CircularProgressIndicator());
@@ -44,8 +45,9 @@ class HomeDashboard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildHeader(context, profile),
-                      _buildLevelCard(context, levelInfo, points),
-                      _buildStatsGrid(context, stats, profile),
+                      _buildFloatingBanner(context),
+                      _buildIntegratedLevelBlock(context, levelInfo, points),
+                      _buildDynamicSubjectsGrid(context, recentDecks),
                       if (userBadges.isNotEmpty) _buildBadgesSection(context, userBadges),
                       _buildRecentActivitySection(context, recentDecks),
                       const SizedBox(height: 100), // Space for bottom nav
@@ -63,8 +65,7 @@ class HomeDashboard extends StatelessWidget {
 
   Widget _buildHeader(BuildContext context, Map<String, dynamic> profile) {
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -73,7 +74,7 @@ class HomeDashboard extends StatelessWidget {
             children: [
               Text(
                 'Bonjour, ${profile['pseudo'] ?? 'Ami'} 👋',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A)),
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A)),
               ),
             ],
           ),
@@ -146,7 +147,62 @@ class HomeDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildLevelCard(BuildContext context, LevelInfo levelInfo, int points) {
+  Widget _buildFloatingBanner(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF2D5C14), Color(0xFF3B6D11)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF2D5C14).withValues(alpha: 0.25),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
+            ),
+            child: const Center(
+              child: Icon(Icons.auto_awesome, color: Colors.white, size: 32),
+            ),
+          ),
+          const SizedBox(width: 15),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Kalan : Ta quête du savoir !',
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  '"Chaque jour est une chance de devenir plus sage." 🌟',
+                  style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIntegratedLevelBlock(BuildContext context, LevelInfo levelInfo, int points) {
     final progress = (points / levelInfo.nextLevelPoints).clamp(0.0, 1.0);
 
     return GestureDetector(
@@ -157,165 +213,190 @@ class HomeDashboard extends StatelessWidget {
         );
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4)),
-        ],
-        border: Border.all(color: Colors.black.withValues(alpha: 0.06), width: 0.5),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Ton niveau', style: TextStyle(fontSize: 12, color: Color(0xFF999999))),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Text(
-                      levelInfo.title.toUpperCase(),
-                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF1A1A1A)),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(color: const Color(0xFF2D6A2D), borderRadius: BorderRadius.circular(4)),
-                      child: const Icon(Icons.star, color: Colors.white, size: 12),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text('Niveau ${levelInfo.level}', style: const TextStyle(fontSize: 12, color: Color(0xFF999999))),
-                const SizedBox(height: 12),
-                Stack(
-                  children: [
-                    Container(
-                      height: 7,
-                      width: double.infinity,
-                      decoration: BoxDecoration(color: const Color(0xFFE8E4DA), borderRadius: BorderRadius.circular(10)),
-                    ),
-                    FractionallySizedBox(
-                      widthFactor: progress,
-                      child: Container(
-                        height: 7,
-                        decoration: BoxDecoration(color: const Color(0xFF2D6A2D), borderRadius: BorderRadius.circular(10)),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 20),
-          Column(
-            children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: const BoxDecoration(color: Color(0xFFEAF3DE), shape: BoxShape.circle),
-                child: Center(
-                  child: TreeEvolution(stage: levelInfo.level, size: 48),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '$points / ${levelInfo.nextLevelPoints} XP',
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF2D6A2D)),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-  Widget _buildStatsGrid(BuildContext context, Map<String, dynamic> stats, Map<String, dynamic> profile) {
-    final deckCount = stats['deckCount'] ?? 0;
-    final quizCount = stats['quizCount'] ?? 0;
-    final avgScore = (stats['avgScore'] * 100).toInt();
-    final points = profile['points'] ?? 0;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Tes statistiques', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-              GestureDetector(
-                onTap: () {
-                  // Navigation vers profil (HomeScreen gère ça via IndexedStack normalement, 
-                  // mais on peut forcer le refresh ou le changement d'index si on avait accès au controller)
-                },
-                child: const Text('Voir tout', style: TextStyle(fontSize: 12, color: Color(0xFF2D6A2D), fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _buildStatItem(Icons.layers, deckCount.toString(), 'Fiches', const Color(0xFF378ADD)),
-              const SizedBox(width: 7),
-              _buildStatItem(Icons.check_box, quizCount.toString(), 'Quiz', const Color(0xFFE07B39)),
-              const SizedBox(width: 7),
-              _buildStatItem(Icons.trending_up, '$avgScore%', 'Moyenne', const Color(0xFF2D6A2D)),
-              const SizedBox(width: 7),
-              _buildStatItem(Icons.stars, points.toString(), 'Points', const Color(0xFFBA7517)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatItem(IconData icon, String value, String label, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+        margin: const EdgeInsets.fromLTRB(20, -25, 20, 16),
+        padding: const EdgeInsets.fromLTRB(20, 45, 20, 20),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.black.withValues(alpha: 0.06), width: 0.5),
+          borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(28), bottomRight: Radius.circular(28)),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20, offset: const Offset(0, 8)),
+          ],
+          border: Border.all(color: Colors.black.withValues(alpha: 0.05), width: 1),
         ),
-        child: Column(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(height: 6),
-            Text(value, style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: color)),
-            const SizedBox(height: 2),
-            Text(label, style: const TextStyle(fontSize: 10, color: Color(0xFF999999), fontWeight: FontWeight.w500)),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'TON STATUT',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade400, fontWeight: FontWeight.w700, letterSpacing: 1),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        levelInfo.title,
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A)),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(color: const Color(0xFFFAC775), borderRadius: BorderRadius.circular(6)),
+                        child: const Icon(Icons.star, color: Color(0xFFBA7517), size: 12),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  RichText(
+                    text: TextSpan(
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF2D5C14), fontFamily: 'fredoka'),
+                      children: [
+                        TextSpan(text: '$points '),
+                        TextSpan(text: '/ ${levelInfo.nextLevelPoints} XP', style: TextStyle(color: Colors.grey.shade300, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              width: 84,
+              height: 84,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  CustomPaint(
+                    size: const Size(84, 84),
+                    painter: OuroborosPainter(progress: progress, color: const Color(0xFF2D5C14)),
+                  ),
+                  // The Tree Evolution inside the circle
+                  TreeEvolution(stage: levelInfo.level, size: 42),
+                  // Level number badge
+                  Positioned(
+                    bottom: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2D5C14),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'NIV. ${levelInfo.level}',
+                        style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBadgesSection(BuildContext context, List<Map<String, dynamic>> userBadges) {
+  Widget _buildDynamicSubjectsGrid(BuildContext context, List<dynamic> recentDecks) {
+    // Collect stats from recentDecks or could be passed from state.stats if available
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Tes badges', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              const Text('Tes matières', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
               GestureDetector(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BadgesScreen())),
-                child: const Text('Voir tout', style: TextStyle(fontSize: 12, color: Color(0xFF2D6A2D), fontWeight: FontWeight.bold)),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DeckListScreen())),
+                child: const Text('Voir tout', style: TextStyle(fontSize: 11, color: Color(0xFF2D5C14), fontWeight: FontWeight.w700)),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: DatabaseHelper.instance.getAllSubjects(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) return const SizedBox(height: 100);
+              final subjects = snapshot.data!.take(4).toList(); // Take first 4 for grid
+              
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  childAspectRatio: 2.2,
+                ),
+                itemCount: subjects.length,
+                itemBuilder: (context, index) {
+                  final s = subjects[index];
+                  final color = Color(s['color'] as int);
+                  return _buildCategoryItem(s['label'], 'Découvrir', Icons.school_rounded, color.withValues(alpha: 0.1), color);
+                },
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryItem(String title, String count, IconData icon, Color bgColor, Color iconColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.03)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 6, offset: const Offset(0, 2))],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(8)),
+            child: Icon(icon, size: 18, color: iconColor),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A))),
+                Text(count, style: const TextStyle(fontSize: 9, color: Color(0xFFAAAAAA))),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBadgesSection(BuildContext context, List<Map<String, dynamic>> userBadges) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Tes badges', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
+              GestureDetector(
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BadgesScreen())),
+                child: const Text('Voir tout', style: TextStyle(fontSize: 11, color: Color(0xFF2D5C14), fontWeight: FontWeight.w700)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           SizedBox(
-            height: 85,
+            height: 80,
             child: FutureBuilder<List<Map<String, dynamic>>>(
               future: DatabaseHelper.instance.getAllBadges(),
               builder: (context, snapshot) {
@@ -324,12 +405,10 @@ class HomeDashboard extends StatelessWidget {
                 final unlockedKeys = userBadges.map((b) => b['badge_key']).toSet();
                 final earnedBadges = allBadges.where((b) => unlockedKeys.contains(b['id'])).toList();
 
-                if (earnedBadges.isEmpty) return const Center(child: Text('Aucun badge débloqué', style: TextStyle(fontSize: 12, color: Colors.grey)));
-
                 return ListView.separated(
                   scrollDirection: Axis.horizontal,
-                  itemCount: earnedBadges.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 16),
+                  itemCount: earnedBadges.length.clamp(0, 6),
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
                   itemBuilder: (context, index) {
                     final badge = earnedBadges[index];
                     final color = Color(badge['color'] as int);
@@ -337,31 +416,28 @@ class HomeDashboard extends StatelessWidget {
                     return Column(
                       children: [
                         Container(
-                          width: 52,
-                          height: 52,
+                          width: 50,
+                          height: 50,
                           decoration: BoxDecoration(
                             color: color.withValues(alpha: 0.15),
                             shape: BoxShape.circle,
-                            border: Border.all(color: color, width: 2),
+                            border: Border.all(color: color, width: 1.5),
                           ),
+                          alignment: Alignment.center,
                           child: ClipOval(
                             child: imagePath != null
                                 ? Image.asset(
                                     'assets/badges/$imagePath',
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Center(
-                                      child: Text(badge['emoji'] ?? '🏆', style: const TextStyle(fontSize: 22)),
-                                    ),
+                                    errorBuilder: (_, __, ___) => Text(badge['emoji'] ?? '🏆', style: const TextStyle(fontSize: 20)),
                                   )
-                                : Center(
-                                    child: Text(badge['emoji'] ?? '🏆', style: const TextStyle(fontSize: 22)),
-                                  ),
+                                : Text(badge['emoji'] ?? '🏆', style: const TextStyle(fontSize: 20)),
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         Text(
                           badge['label'],
-                          style: const TextStyle(fontSize: 10, color: Color(0xFF555555), fontWeight: FontWeight.w500),
+                          style: const TextStyle(fontSize: 9, color: Color(0xFF555555), fontWeight: FontWeight.w600),
                         ),
                       ],
                     );
@@ -384,10 +460,10 @@ class HomeDashboard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Activités récentes', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              const Text('Activités récentes', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
               GestureDetector(
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DeckListScreen())),
-                child: const Text('Voir tout', style: TextStyle(fontSize: 12, color: Color(0xFF2D6A2D), fontWeight: FontWeight.bold)),
+                child: const Text('Voir tout', style: TextStyle(fontSize: 11, color: Color(0xFF2D5C14), fontWeight: FontWeight.w700)),
               ),
             ],
           ),
@@ -404,20 +480,19 @@ class HomeDashboard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.black.withValues(alpha: 0.06), width: 0.5),
+                border: Border.all(color: Colors.black.withValues(alpha: 0.04), width: 0.5),
               ),
               child: ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: recentDecks.length,
-                separatorBuilder: (_, __) => Divider(height: 1, color: Colors.black.withValues(alpha: 0.05)),
+                itemCount: recentDecks.length.clamp(0, 4),
+                separatorBuilder: (_, __) => Divider(height: 1, color: Colors.black.withValues(alpha: 0.03)),
                 itemBuilder: (context, index) {
                   final deck = recentDecks[index];
                   final subject = deck['subject'] ?? 'Général';
+                  final score = deck['lastScore'];
                   final dateStr = deck['created_at'] ?? DateTime.now().toIso8601String();
                   final date = DateTime.tryParse(dateStr) ?? DateTime.now();
-                  final score = deck['lastScore'];
-                  final cardCount = deck['cardCount'] ?? 0;
 
                   return ListTile(
                     onTap: () {
@@ -428,32 +503,34 @@ class HomeDashboard extends StatelessWidget {
                         ),
                       );
                     },
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
                     leading: Container(
-                      width: 40,
-                      height: 40,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
-                        color: _getSubjectColor(subject).withValues(alpha: 0.15),
+                        color: _getSubjectColor(subject).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(Icons.book, size: 20, color: _getSubjectColor(subject)),
+                      child: Icon(Icons.book_rounded, size: 18, color: _getSubjectColor(subject)),
                     ),
                     title: Text(
                       deck['title'],
                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A)),
                     ),
-                    subtitle: Text(
-                      score != null ? 'Dernier score : $score%' : '$cardCount cartes créées',
-                      style: TextStyle(fontSize: 12, color: score != null ? _getSubjectColor(subject) : const Color(0xFF999999)),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
+                    subtitle: Row(
                       children: [
-                        Text(_formatDate(date), style: const TextStyle(fontSize: 11, color: Color(0xFFAAAAAA))),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.chevron_right, size: 14, color: Color(0xFFCCCCCC)),
+                        Text(
+                          score != null ? 'Score : $score%' : 'En cours',
+                          style: TextStyle(fontSize: 11, color: score != null ? _getSubjectColor(subject) : const Color(0xFF999999), fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _formatDate(date),
+                          style: const TextStyle(fontSize: 10, color: Color(0xFFAAAAAA)),
+                        ),
                       ],
                     ),
+                    trailing: const Icon(Icons.chevron_right_rounded, size: 16, color: Color(0xFFCCCCCC)),
                   );
                 },
               ),
@@ -478,10 +555,8 @@ class HomeDashboard extends StatelessWidget {
         return const Color(0xFFB00020);
       case 'histoire-géo':
         return const Color(0xFF854F0B);
-      case 'informatique':
-        return const Color(0xFF009688);
       case 'autre':
-        return const Color(0xFF757575);
+        return const Color(0xFF2196F3); // Blue for Other
       default:
         return const Color(0xFF2D6A2D);
     }
@@ -494,4 +569,53 @@ class HomeDashboard extends StatelessWidget {
     if (diff.inDays == 1) return 'Hier';
     return DateFormat('dd/MM').format(date);
   }
+}
+
+class OuroborosPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+
+  OuroborosPainter({required this.progress, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 4;
+    final strokeWidth = 7.0;
+
+    // Track
+    final trackPaint = Paint()
+      ..color = const Color(0xFFF0EEE9)
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+    canvas.drawCircle(center, radius, trackPaint);
+
+    // Progress
+    final progressPaint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2,
+      2 * math.pi * progress,
+      false,
+      progressPaint,
+    );
+    
+    // Serpent head simplified
+    final headAngle = -math.pi / 2 + (2 * math.pi * progress);
+    final headOffset = Offset(
+      center.dx + radius * math.cos(headAngle),
+      center.dy + radius * math.sin(headAngle),
+    );
+    
+    final headPaint = Paint()..color = color;
+    canvas.drawCircle(headOffset, 4, headPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

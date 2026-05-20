@@ -262,9 +262,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final displayPercentage = deck.lastQuizScore ?? 
         (totalCards > 0 ? (deck.masteredCount / totalCards * 100).round() : 0);
     
-    // Change color for 'Autre' or default grey to something more vibrant (e.g., Purple)
-    final isDefaultGrey = color.red == 0x9E && color.green == 0x9E && color.blue == 0x9E;
-    final categoryColor = isDefaultGrey ? const Color(0xFF9C27B0) : color;
+    // Change color for 'Autre' or default grey to Blue
+    final isDefaultGrey = color.toARGB32() == 0xFF9E9E9E;
+    final categoryColor = isDefaultGrey ? const Color(0xFF2196F3) : color;
     final masteryColor = displayPercentage < 50 ? const Color(0xFFE07B39) : categoryColor;
 
     return GestureDetector(
@@ -289,13 +289,25 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   decoration: BoxDecoration(color: categoryColor.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
                   child: Icon(Icons.book, color: categoryColor, size: 18),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.share_rounded, size: 16, color: Color(0xFF888888)),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  onPressed: () {
-                    Share.share('Révise avec moi la fiche "${deck.title}" sur KALAN ! 📚\n\nApprends plus vite avec KALAN.');
-                  },
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.share_rounded, size: 16, color: Color(0xFF888888)),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () {
+                        Share.share('Révise avec moi la fiche "${deck.title}" sur KALAN ! 📚\n\nApprends plus vite avec KALAN.');
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.redAccent),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () => _confirmDelete(context, deck),
+                    ),
+                  ],
                 ),
               ],
             ),
