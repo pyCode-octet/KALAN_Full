@@ -15,9 +15,9 @@ class BadgeRepositoryImpl implements BadgeRepository {
 
   Future<String?> _getLocalUserId() async {
     final db = await _dbHelper.database;
-    final profiles = await db.query('user_profile', limit: 1);
-    if (profiles.isNotEmpty) {
-      return profiles.first['uuid'] as String?;
+    final users = await db.query('users', limit: 1);
+    if (users.isNotEmpty) {
+      return users.first['uuid'] as String?;
     }
     return null;
   }

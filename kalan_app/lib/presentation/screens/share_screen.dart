@@ -72,13 +72,16 @@ class _ShareScreenState extends State<ShareScreen> {
           _showSnackBar('Aucun deck à envoyer');
           return;
         }
-        // Pour l'exemple on prend le premier si aucun n'est passé
         final deckMap = decks.first;
-        // On pourrait convertir deckMap en Deck ici si besoin, 
-        // mais on a besoin des flashcards surtout.
+        deckToSend = Deck(
+          uuid: deckMap['uuid'] as String,
+          title: deckMap['title'] as String,
+          description: deckMap['description'] as String?,
+          subject: deckMap['subject'] as String?,
+          level: deckMap['level'] as String?,
+          createdAt: DateTime.tryParse(deckMap['created_at']?.toString() ?? '') ?? DateTime.now(),
+        );
       }
-
-      if (deckToSend == null) return;
 
       final flashcards = await DatabaseHelper.instance.getFlashcards(deckToSend.uuid);
       

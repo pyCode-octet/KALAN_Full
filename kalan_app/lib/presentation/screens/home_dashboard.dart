@@ -8,13 +8,13 @@ import '../blocs/user/user_bloc.dart';
 import '../blocs/user/user_state.dart';
 import '../widgets/tree_evolution.dart';
 import 'flashcard_study_screen.dart';
-import 'deck_list_screen.dart';
 import 'badges_screen.dart';
 import 'notification_screen.dart';
 import '../../data/local/database_helper.dart';
 import 'roadmap_screen.dart';
 import '../blocs/notification/notification_bloc.dart';
 import '../blocs/notification/notification_state.dart';
+import 'library_screen.dart';
 
 class HomeDashboard extends StatelessWidget {
   const HomeDashboard({super.key});
@@ -45,8 +45,24 @@ class HomeDashboard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildHeader(context, profile),
-                      _buildFloatingBanner(context),
-                      _buildIntegratedLevelBlock(context, levelInfo, points),
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Opacity(
+                                opacity: 0.0,
+                                child: IgnorePointer(
+                                  child: _buildFloatingBanner(context),
+                                ),
+                              ),
+                              _buildIntegratedLevelBlock(context, levelInfo, points),
+                            ],
+                          ),
+                          _buildFloatingBanner(context),
+                        ],
+                      ),
                       _buildDynamicSubjectsGrid(context, recentDecks),
                       if (userBadges.isNotEmpty) _buildBadgesSection(context, userBadges),
                       _buildRecentActivitySection(context, recentDecks),
@@ -212,87 +228,100 @@ class HomeDashboard extends StatelessWidget {
           MaterialPageRoute(builder: (_) => const RoadmapScreen()),
         );
       },
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(20, -25, 20, 16),
-        padding: const EdgeInsets.fromLTRB(20, 45, 20, 20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(28), bottomRight: Radius.circular(28)),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20, offset: const Offset(0, 8)),
-          ],
-          border: Border.all(color: Colors.black.withValues(alpha: 0.05), width: 1),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'TON STATUT',
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade400, fontWeight: FontWeight.w700, letterSpacing: 1),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text(
-                        levelInfo.title,
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A)),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(color: const Color(0xFFFAC775), borderRadius: BorderRadius.circular(6)),
-                        child: const Icon(Icons.star, color: Color(0xFFBA7517), size: 12),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  RichText(
-                    text: TextSpan(
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF2D5C14), fontFamily: 'fredoka'),
+      child: Transform.translate(
+        offset: const Offset(0, -25),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.fromLTRB(20, 45, 20, 20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(28), bottomRight: Radius.circular(28)),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20, offset: const Offset(0, 8)),
+            ],
+            border: Border.all(color: Colors.black.withValues(alpha: 0.05), width: 1),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'TON STATUT',
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade400, fontWeight: FontWeight.w700, letterSpacing: 1),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
                       children: [
-                        TextSpan(text: '$points '),
-                        TextSpan(text: '/ ${levelInfo.nextLevelPoints} XP', style: TextStyle(color: Colors.grey.shade300, fontWeight: FontWeight.w500)),
+                        Text(
+                          levelInfo.title,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A)),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(color: const Color(0xFFFAC775), borderRadius: BorderRadius.circular(6)),
+                          child: const Icon(Icons.star, color: Color(0xFFBA7517), size: 12),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 84,
+                    height: 84,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CustomPaint(
+                          size: const Size(84, 84),
+                          painter: OuroborosPainter(progress: progress, color: const Color(0xFF2D5C14)),
+                        ),
+                        // Mascot image or fallback TreeEvolution inside the circle
+                        ClipOval(
+                          child: Image.asset(
+                            'assets/badges/humanites/ideogram-v3.0_BADGE_Pousse_kalan.jpg',
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return TreeEvolution(stage: levelInfo.level, size: 42);
+                            },
+                          ),
+                        ),
+                        // Level number badge
+                        Positioned(
+                          bottom: 0,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2D5C14),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'NIV. ${levelInfo.level}',
+                              style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-            SizedBox(
-              width: 84,
-              height: 84,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  CustomPaint(
-                    size: const Size(84, 84),
-                    painter: OuroborosPainter(progress: progress, color: const Color(0xFF2D5C14)),
-                  ),
-                  // The Tree Evolution inside the circle
-                  TreeEvolution(stage: levelInfo.level, size: 42),
-                  // Level number badge
-                  Positioned(
-                    bottom: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2D5C14),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'NIV. ${levelInfo.level}',
-                        style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900),
-                      ),
-                    ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$points / ${levelInfo.nextLevelPoints} XP',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF2D5C14)),
                   ),
                 ],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -310,7 +339,7 @@ class HomeDashboard extends StatelessWidget {
             children: [
               const Text('Tes matières', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
               GestureDetector(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DeckListScreen())),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LibraryScreen())),
                 child: const Text('Voir tout', style: TextStyle(fontSize: 11, color: Color(0xFF2D5C14), fontWeight: FontWeight.w700)),
               ),
             ],
@@ -462,7 +491,7 @@ class HomeDashboard extends StatelessWidget {
             children: [
               const Text('Activités récentes', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
               GestureDetector(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DeckListScreen())),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LibraryScreen())),
                 child: const Text('Voir tout', style: TextStyle(fontSize: 11, color: Color(0xFF2D5C14), fontWeight: FontWeight.w700)),
               ),
             ],
@@ -555,10 +584,8 @@ class HomeDashboard extends StatelessWidget {
         return const Color(0xFFB00020);
       case 'histoire-géo':
         return const Color(0xFF854F0B);
-      case 'autre':
-        return const Color(0xFF2196F3); // Blue for Other
       default:
-        return const Color(0xFF2D6A2D);
+        return const Color(0xFF2196F3); // Bleu pour Autre
     }
   }
 

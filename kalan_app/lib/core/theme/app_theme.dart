@@ -7,7 +7,6 @@ class AppTheme {
   static ThemeData darkTheme() => _buildTheme(Brightness.dark);
 
   static ThemeData _buildTheme(Brightness brightness) {
-    final isDark = brightness == Brightness.dark;
     const bg = AppColors.background; // Fond global blanc
     const surf = AppColors.surface; // Toujours blanc
     const onBg = AppColors.onBackground; // Toujours sombre pour la lisibilité

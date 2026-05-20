@@ -141,26 +141,6 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
     );
   }
 
-  Widget _buildDropdown(List<String> items, String value, Function(String?) onChanged) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF2D6A2D)),
-          onChanged: onChanged,
-          items: items.map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
-        ),
-      ),
-    );
-  }
-
   Widget _buildAIButton() {
     return SizedBox(
       width: double.infinity,

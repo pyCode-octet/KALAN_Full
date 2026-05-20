@@ -38,47 +38,44 @@ class _TreePainter extends CustomPainter {
 
     final trunkPaint = Paint()..color = const Color(0xFF854F0B);
     final leafPaint = Paint()..color = const Color(0xFF2D6A2D);
-    final darkLeafPaint = Paint()..color = const Color(0xFF3B6D11);
-    final fruitPaint = Paint()..color = const Color(0xFFFAC775);
+    final darkLeafPaint = Paint()..color = const Color(0xFF1E4D1E);
+    final firePaint = Paint()..color = const Color(0xFFFF5722);
+    final goldPaint = Paint()..color = const Color(0xFFFFD700);
+    final whitePaint = Paint()..color = Colors.white;
+    final orangePaint = Paint()..color = Colors.orange;
 
     switch (stage) {
       case 1: // Graine
         canvas.drawCircle(Offset(center.dx, center.dy + 5), 3, trunkPaint);
         break;
-      case 2: // Jeune Pousse
-        canvas.drawRect(Rect.fromLTWH(center.dx - 1.5, center.dy + 2, 3, 8), trunkPaint);
-        canvas.drawOval(Rect.fromLTWH(center.dx - 4, center.dy - 6, 8, 10), leafPaint);
+      case 2: // Baobab
+        canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(center.dx - 10, center.dy + 2, 20, 20), const Radius.circular(4)), trunkPaint);
+        canvas.drawOval(Rect.fromLTWH(center.dx - 15, center.dy - 18, 30, 24), leafPaint);
         break;
-      case 3: // Arbrisseau
-        canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(center.dx - 2, center.dy + 5, 4, 12), const Radius.circular(1)), trunkPaint);
-        canvas.drawOval(Rect.fromLTWH(center.dx - 10, center.dy - 10, 20, 18), leafPaint);
-        canvas.drawOval(Rect.fromLTWH(center.dx - 14, center.dy - 2, 12, 10), darkLeafPaint);
+      case 3: // Feu de Brousse
+        canvas.drawRect(Rect.fromLTWH(center.dx - 3, center.dy + 5, 6, 12), trunkPaint);
+        canvas.drawOval(Rect.fromLTWH(center.dx - 15, center.dy - 15, 30, 26), firePaint);
+        canvas.drawOval(Rect.fromLTWH(center.dx - 10, center.dy - 10, 20, 18), orangePaint);
         break;
-      case 4: // Arbre Majeur
-        canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(center.dx - 3, center.dy + 10, 6, 12), const Radius.circular(2)), trunkPaint);
-        canvas.drawOval(Rect.fromLTWH(center.dx - 15, center.dy - 15, 30, 26), leafPaint);
-        canvas.drawOval(Rect.fromLTWH(center.dx - 22, center.dy - 2, 16, 14), darkLeafPaint);
-        canvas.drawOval(Rect.fromLTWH(center.dx + 6, center.dy - 2, 16, 14), darkLeafPaint);
+      case 4: // Griot
+        canvas.drawRect(Rect.fromLTWH(center.dx - 3, center.dy + 5, 6, 12), trunkPaint);
+        canvas.drawOval(Rect.fromLTWH(center.dx - 18, center.dy - 18, 36, 30), leafPaint);
+        canvas.drawCircle(Offset(center.dx - 10, center.dy - 5), 2, goldPaint);
+        canvas.drawCircle(Offset(center.dx + 10, center.dy - 10), 2, goldPaint);
         break;
-      case 5: // Baobab Sacré
+      case 5: // Masque
+        canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(center.dx - 4, center.dy + 5, 8, 15), const Radius.circular(2)), trunkPaint);
+        canvas.drawOval(Rect.fromLTWH(center.dx - 22, center.dy - 22, 44, 38), darkLeafPaint);
+        canvas.drawCircle(Offset(center.dx - 2, center.dy + 10), 1.5, whitePaint);
+        canvas.drawCircle(Offset(center.dx + 2, center.dy + 10), 1.5, whitePaint);
+        break;
+      case 6: // Ancêtre
       default:
-        // Tronçon massif
-        canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(center.dx - 6, center.dy + 8, 12, 15), const Radius.circular(3)), trunkPaint);
-        // Couronne dense
-        canvas.drawOval(Rect.fromLTWH(center.dx - 20, center.dy - 22, 40, 32), leafPaint);
-        canvas.drawOval(Rect.fromLTWH(center.dx - 28, center.dy - 8, 20, 18), darkLeafPaint);
-        canvas.drawOval(Rect.fromLTWH(center.dx + 8, center.dy - 8, 20, 18), darkLeafPaint);
-        canvas.drawOval(Rect.fromLTWH(center.dx - 12, center.dy + 2, 24, 16), leafPaint);
-        
-        // Quelques "fruits" ou fleurs (jaune)
-        canvas.drawPath(
-          Path()
-            ..moveTo(center.dx, center.dy - 25)
-            ..lineTo(center.dx + 3, center.dy - 20)
-            ..lineTo(center.dx - 3, center.dy - 20)
-            ..close(),
-          fruitPaint,
-        );
+        final glowPaint = Paint()..color = Colors.white.withValues(alpha: 0.8)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+        canvas.drawCircle(center, radius - 5, glowPaint);
+        canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(center.dx - 5, center.dy + 5, 10, 15), const Radius.circular(3)), trunkPaint);
+        canvas.drawOval(Rect.fromLTWH(center.dx - 25, center.dy - 25, 50, 42), goldPaint);
+        canvas.drawOval(Rect.fromLTWH(center.dx - 15, center.dy - 15, 30, 25), whitePaint);
         break;
     }
   }

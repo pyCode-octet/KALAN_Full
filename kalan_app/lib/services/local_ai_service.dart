@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../ai/gemma_service.dart';
-import 'connectivity_service.dart';
 
 class LocalAIService {
   static final LocalAIService _instance = LocalAIService._internal();
@@ -11,7 +10,6 @@ class LocalAIService {
   LocalAIService._internal();
 
   final GemmaService _gemmaService = GemmaService();
-  final ConnectivityService _connectivityService = ConnectivityService();
 
   static String get _hfToken => dotenv.env['HF_TOKEN'] ?? '';
   static const String _hfBaseUrl = 'https://router.huggingface.co/v1/chat/completions';

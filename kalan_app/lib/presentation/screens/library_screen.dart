@@ -240,7 +240,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
           ),
         ),
         SizedBox(
-          height: 170,
+          height: 140,
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             scrollDirection: Axis.horizontal,
@@ -282,48 +282,29 @@ class _LibraryScreenState extends State<LibraryScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  width: 32, height: 32,
+                  width: 30, height: 30,
                   decoration: BoxDecoration(color: categoryColor.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
-                  child: Icon(Icons.book, color: categoryColor, size: 18),
+                  child: Icon(Icons.book, color: categoryColor, size: 16),
                 ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.share_rounded, size: 16, color: Color(0xFF888888)),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed: () {
-                        Share.share('Révise avec moi la fiche "${deck.title}" sur KALAN ! 📚\n\nApprends plus vite avec KALAN.');
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.redAccent),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed: () => _confirmDelete(context, deck),
-                    ),
-                  ],
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    deck.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A)),
+                  ),
                 ),
               ],
             ),
-            const Spacer(),
-            Text(
-              deck.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A)),
-            ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 8),
             Text(
               '$totalCards cartes',
-              style: const TextStyle(fontSize: 10, color: Color(0xFF888888)),
+              style: const TextStyle(fontSize: 9, color: Color(0xFF888888)),
             ),
-            const SizedBox(height: 8),
+            const Spacer(),
             Stack(
               children: [
                 Container(height: 4, width: double.infinity, decoration: BoxDecoration(color: const Color(0xFFE8E4DA), borderRadius: BorderRadius.circular(4))),
@@ -333,10 +314,35 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              '$displayPercentage% maîtrisé',
-              style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: masteryColor),
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '$displayPercentage%',
+                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: masteryColor),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.share_rounded, size: 14, color: Color(0xFF888888)),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () {
+                        Share.share('Révise avec moi la fiche "${deck.title}" sur KALAN ! 📚\n\nApprends plus vite avec KALAN.');
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded, size: 14, color: Colors.redAccent),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () => _confirmDelete(context, deck),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ],
         ),

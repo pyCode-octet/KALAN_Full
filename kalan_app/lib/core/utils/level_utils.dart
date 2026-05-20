@@ -25,10 +25,11 @@ class LevelInfo {
 class LevelUtils {
   static final List<LevelInfo> levels = [
     LevelInfo(title: 'Graine', level: 1, minPoints: 0, maxPoints: 100, icon: '🌱'),
-    LevelInfo(title: 'Jeune Pousse', level: 2, minPoints: 100, maxPoints: 300, icon: '🌿'),
-    LevelInfo(title: 'Arbrisseau', level: 3, minPoints: 300, maxPoints: 700, icon: '🌳'),
-    LevelInfo(title: 'Arbre Majeur', level: 4, minPoints: 700, maxPoints: 1500, icon: '🌲'),
-    LevelInfo(title: 'Baobab Sacré', level: 5, minPoints: 1500, maxPoints: 999999, icon: '🌴'),
+    LevelInfo(title: 'Baobab', level: 2, minPoints: 100, maxPoints: 300, icon: '🌳'),
+    LevelInfo(title: 'Feu de Brousse', level: 3, minPoints: 300, maxPoints: 700, icon: '🔥'),
+    LevelInfo(title: 'Griot', level: 4, minPoints: 700, maxPoints: 1200, icon: '🪕'),
+    LevelInfo(title: 'Masque', level: 5, minPoints: 1200, maxPoints: 2000, icon: '🎭'),
+    LevelInfo(title: 'Ancêtre', level: 6, minPoints: 2000, maxPoints: 999999, icon: '✨'),
   ];
 
   static LevelInfo getLevelInfo(int points) {

@@ -73,7 +73,7 @@ class _LevelUpContent extends StatelessWidget {
             borderRadius: BorderRadius.circular(32),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF2D6A2D).withOpacity(0.3),
+                color: const Color(0xFF2D6A2D).withValues(alpha: 0.3),
                 blurRadius: 40,
                 spreadRadius: 10,
               ),
@@ -103,7 +103,7 @@ class _LevelUpContent extends StatelessWidget {
                   border: Border.all(color: const Color(0xFF2D6A2D), width: 4),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF2D6A2D).withOpacity(0.2),
+                      color: const Color(0xFF2D6A2D).withValues(alpha: 0.2),
                       blurRadius: 20,
                       spreadRadius: 5,
                     ),
@@ -135,12 +135,33 @@ class _LevelUpContent extends StatelessWidget {
               const SizedBox(height: 16),
               
               const Text(
-                'Félicitations ! Ton savoir grandit comme cet arbre. Continue comme ça !',
+                'Félicitations ! 🎉',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 16,
                   color: Color(0xFF777777),
                   height: 1.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Tu es passé au niveau $level !',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 18,
+                  color: Color(0xFF1A1A1A),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Ton savoir grandit comme cet arbre. Continue comme ça, tu as déjà généré $flashcardsCount fiches de révision ! 📚✨',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF555555),
+                  height: 1.4,
                 ),
               ),
               const SizedBox(height: 32),
@@ -150,7 +171,7 @@ class _LevelUpContent extends StatelessWidget {
                 children: [
                   _rewardItem('Cadeau', '+$pointsReward XP', Colors.orange),
                   const SizedBox(width: 12),
-                  _rewardItem('Généré', '$flashcardsCount fiches', const Color(0xFF2D6A2D)),
+                  _rewardItem('Total Fiches', '$flashcardsCount', const Color(0xFF2D6A2D)),
                 ],
               ),
               const SizedBox(height: 32),
@@ -186,15 +207,15 @@ class _LevelUpContent extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
             Text(
               label,
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color.withOpacity(0.7)),
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color.withValues(alpha: 0.7)),
             ),
             const SizedBox(height: 4),
             Text(

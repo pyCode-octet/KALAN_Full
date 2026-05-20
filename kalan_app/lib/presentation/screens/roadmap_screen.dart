@@ -136,7 +136,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
       icon: Icons.history_edu_rounded,
       level: 4,
       levelTitle: 'Griot',
-      xpRequired: 800,
+      xpRequired: 1000,
     ),
     const RoadmapStep(
       index: 11,
@@ -145,7 +145,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
       icon: Icons.record_voice_over_rounded,
       level: 4,
       levelTitle: 'Griot',
-      xpRequired: 900,
+      xpRequired: 1100,
     ),
     const RoadmapStep(
       index: 12,
@@ -154,7 +154,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
       icon: Icons.visibility_rounded,
       level: 5,
       levelTitle: 'Masque',
-      xpRequired: 1000,
+      xpRequired: 1200,
     ),
     const RoadmapStep(
       index: 13,
@@ -163,7 +163,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
       icon: Icons.theater_comedy_rounded,
       level: 5,
       levelTitle: 'Masque',
-      xpRequired: 1120,
+      xpRequired: 1400,
     ),
     const RoadmapStep(
       index: 14,
@@ -172,7 +172,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
       icon: Icons.psychology_rounded,
       level: 5,
       levelTitle: 'Masque',
-      xpRequired: 1250,
+      xpRequired: 1600,
     ),
     const RoadmapStep(
       index: 15,
@@ -181,7 +181,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
       icon: Icons.security_rounded,
       level: 5,
       levelTitle: 'Masque',
-      xpRequired: 1380,
+      xpRequired: 1800,
     ),
     const RoadmapStep(
       index: 16,
@@ -190,7 +190,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
       icon: Icons.auto_awesome_rounded,
       level: 6,
       levelTitle: 'Ancêtre',
-      xpRequired: 1500,
+      xpRequired: 2000,
     ),
   ];
 
@@ -269,12 +269,11 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
 
                               // 2. Bannières des Zones de Niveaux
                               _buildZoneBannerWidget('GRAINE', 'Niveau 1', const Color(0xFF2D6A2D), const Color(0xFFEAF3DE), 20),
-                              _buildZoneBannerWidget('BAOBAB', 'Niveau 2', const Color(0xFF854F0B), const Color(0xFFFFF3E0), 310),
-                              _buildZoneBannerWidget('FEU DE BROUSSE', 'Niveau 3', const Color(0xFFC92A2A), const Color(0xFFFFEBEE), 730),
-                              _buildZoneBannerWidget('GRIOT', 'Niveau 4', const Color(0xFFE07B39), const Color(0xFFFFFDE7), 1150),
-                              _buildZoneBannerWidget('MASQUE', 'Niveau 5', const Color(0xFF673AB7), const Color(0xFFF3E5F5), 1710),
-                              _buildZoneBannerWidget('ANCÊTRE', 'Niveau 6', const Color(0xFF009688), const Color(0xFFE0F2F1), 2270),
-
+                              _buildZoneBannerWidget('BAOBAB', 'Niveau 2', const Color(0xFF854F0B), const Color(0xFFFFF3E0), 300),
+                              _buildZoneBannerWidget('FEU DE BROUSSE', 'Niveau 3', const Color(0xFFC92A2A), const Color(0xFFFFEBEE), 720),
+                              _buildZoneBannerWidget('GRIOT', 'Niveau 4', const Color(0xFFE07B39), const Color(0xFFFFFDE7), 1140),
+                              _buildZoneBannerWidget('MASQUE', 'Niveau 5', const Color(0xFF673AB7), const Color(0xFFF3E5F5), 1700),
+                              _buildZoneBannerWidget('ANCÊTRE', 'Niveau 6', const Color(0xFF009688), const Color(0xFFE0F2F1), 2260),
                               // 3. Boutons d'étapes (Nodes)
                               SizedBox(
                                 height: mapHeight,
@@ -441,7 +440,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.flag_rounded, color: color, size: 14),
+              TreeEvolution(stage: int.parse(levelSubtitle.split(' ').last), size: 16),
               const SizedBox(width: 8),
               Text(
                 '$levelSubtitle : $title',
@@ -759,20 +758,16 @@ class _RoadmapNodeButtonState extends State<RoadmapNodeButton> with SingleTicker
     // Choisir les couleurs du bouton
     Color baseColor;
     Color shadowColor;
-    Color iconColor;
 
     if (widget.isCompleted) {
       baseColor = const Color(0xFF58CC02); // Vert vif
       shadowColor = const Color(0xFF46A302); // Vert ombre
-      iconColor = Colors.white;
     } else if (widget.isActive) {
       baseColor = const Color(0xFFE8C87A); // Or
       shadowColor = const Color(0xFFCBB06B); // Or ombre
-      iconColor = const Color(0xFF2D6A2D);
     } else {
       baseColor = const Color(0xFFE5E5E5); // Gris
       shadowColor = const Color(0xFFAFAFAF); // Gris ombre
-      iconColor = const Color(0xFF8F8F8F);
     }
 
     return GestureDetector(
@@ -839,11 +834,9 @@ class _RoadmapNodeButtonState extends State<RoadmapNodeButton> with SingleTicker
               ),
             ),
             child: Center(
-              child: Icon(
-                widget.isLocked ? Icons.lock_rounded : widget.step.icon,
-                color: iconColor,
-                size: widget.isLocked ? 24 : 28,
-              ),
+              child: widget.isLocked 
+                ? const Icon(Icons.lock_rounded, color: Color(0xFF8F8F8F), size: 24)
+                : TreeEvolution(stage: widget.step.level, size: 36),
             ),
           ),
         ],

@@ -16,6 +16,7 @@ import '../blocs/quiz/quiz_state.dart';
 import '../widgets/badge_unlock_popup.dart';
 import '../widgets/level_up_popup.dart';
 import '../../core/utils/level_utils.dart';
+import '../widgets/tree_evolution.dart';
 import 'home_dashboard.dart';
 import 'library_screen.dart';
 import 'profile_screen.dart';
@@ -171,15 +172,25 @@ class _HomeScreenState extends State<HomeScreen> {
                   left: 0,
                   right: 0,
                   height: 65,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _navItem(0, Icons.description_outlined, Icons.description_rounded, 'Accueil'),
-                      _navItem(1, Icons.auto_stories_outlined, Icons.auto_stories_rounded, 'Librairie'),
-                      const SizedBox(width: 60), // Espace central réservé au bouton
-                      _navItem(3, Icons.emoji_events_outlined, Icons.emoji_events_rounded, 'Niveau'),
-                      _navItem(4, Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
-                    ],
+                  child: BlocBuilder<UserBloc, UserState>(
+                    builder: (context, state) {
+                      int currentStage = 1;
+                      if (state is UserLoaded) {
+                        final points = state.profile['points'] as int? ?? 0;
+                        currentStage = LevelUtils.getLevelInfo(points).level;
+                      }
+
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _navItem(0, Icons.description_outlined, Icons.description_rounded, 'Accueil'),
+                          _navItem(1, Icons.auto_stories_outlined, Icons.auto_stories_rounded, 'Librairie'),
+                          const SizedBox(width: 60), // Espace central réservé au bouton
+                          _navItem(3, null, null, 'Niveau', customIcon: TreeEvolution(stage: currentStage, size: 22)),
+                          _navItem(4, Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
+                        ],
+                      );
+                    },
                   ),
                 ),
                 // Le point indicateur vert glissant (placé sous le texte)
@@ -407,7 +418,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _navItem(int index, IconData iconOutlined, IconData iconFilled, String label) {
+  Widget _navItem(int index, IconData? iconOutlined, IconData? iconFilled, String label, {Widget? customIcon}) {
     final isSelected = _currentIndex == index;
     return InkWell(
       onTap: () => setState(() => _currentIndex = index),
@@ -418,11 +429,21 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              isSelected ? iconFilled : iconOutlined,
-              color: isSelected ? AppColors.primary : const Color(0xFFB0A89A),
-              size: 22,
-            ),
+            if (customIcon != null)
+              SizedBox(
+                width: 22,
+                height: 22,
+                child: Opacity(
+                  opacity: isSelected ? 1.0 : 0.6,
+                  child: customIcon,
+                ),
+              )
+            else
+              Icon(
+                isSelected ? iconFilled : iconOutlined,
+                color: isSelected ? AppColors.primary : const Color(0xFFB0A89A),
+                size: 22,
+              ),
             const SizedBox(height: 2),
             Text(
               label,

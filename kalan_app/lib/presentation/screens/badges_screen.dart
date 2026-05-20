@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../core/utils/level_utils.dart';
+import '../widgets/tree_evolution.dart';
 import '../blocs/badge/badge_bloc.dart';
 import '../blocs/badge/badge_event.dart';
 import '../blocs/badge/badge_state.dart';
@@ -81,7 +83,16 @@ class _BadgesScreenState extends State<BadgesScreen> with SingleTickerProviderSt
 
           if (state is BadgeLoaded) {
             final unlockedKeys = state.unlockedBadges.map((b) => b.badgeKey).toSet();
-            final filteredBadges = _getFilteredBadges(state.allBadges, unlockedKeys);
+            
+            // Sort: earned first, then locked
+            final sortedBadges = List<Map<String, dynamic>>.from(state.allBadges)
+              ..sort((a, b) {
+                bool aUnlocked = unlockedKeys.contains(a['id']);
+                bool bUnlocked = unlockedKeys.contains(b['id']);
+                if (aUnlocked && !bUnlocked) return -1;
+                if (!aUnlocked && bUnlocked) return 1;
+                return 0;
+              });
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,12 +100,10 @@ class _BadgesScreenState extends State<BadgesScreen> with SingleTickerProviderSt
                 _buildStatsHeader(context, unlockedKeys.length, state.allBadges.length),
                 _buildTabs(),
                 const SizedBox(height: 12),
-                _buildCategoryFilters(),
-                const SizedBox(height: 12),
                 Expanded(
-                  child: filteredBadges.isEmpty
+                  child: sortedBadges.isEmpty
                       ? _buildEmptyState()
-                      : _buildBadgesGrid(filteredBadges, unlockedKeys),
+                      : _buildBadgesGrid(sortedBadges, unlockedKeys),
                 ),
               ],
             );
@@ -111,12 +120,6 @@ class _BadgesScreenState extends State<BadgesScreen> with SingleTickerProviderSt
   }
 
   Widget _buildStatsHeader(BuildContext context, int obtained, int total) {
-    int xpPoints = 1250;
-    final userState = context.read<UserBloc>().state;
-    if (userState is UserLoaded) {
-      xpPoints = userState.profile['points'] as int? ?? 0;
-    }
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Container(
@@ -126,7 +129,7 @@ class _BadgesScreenState extends State<BadgesScreen> with SingleTickerProviderSt
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -189,28 +192,38 @@ class _BadgesScreenState extends State<BadgesScreen> with SingleTickerProviderSt
             ),
             // Points XP
             Expanded(
-              child: Column(
-                children: [
-                  const Text('⭐', style: TextStyle(fontSize: 24)),
-                  const SizedBox(height: 8),
-                  Text(
-                    '$xpPoints',
-                    style: const TextStyle(
-                      color: Color(0xFFFF9800),
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Points XP',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Color(0xFF666666),
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
+              child: BlocBuilder<UserBloc, UserState>(
+                builder: (context, userState) {
+                  int points = 0;
+                  int stage = 1;
+                  if (userState is UserLoaded) {
+                    points = userState.profile['points'] as int? ?? 0;
+                    stage = LevelUtils.getLevelInfo(points).level;
+                  }
+                  return Column(
+                    children: [
+                      TreeEvolution(stage: stage, size: 28),
+                      const SizedBox(height: 8),
+                      Text(
+                        '$points',
+                        style: const TextStyle(
+                          color: Color(0xFFFF9800),
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Points XP',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFF666666),
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ],
@@ -264,46 +277,6 @@ class _BadgesScreenState extends State<BadgesScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildCategoryFilters() {
-    return SizedBox(
-      height: 38,
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        scrollDirection: Axis.horizontal,
-        itemCount: _categories.length,
-        itemBuilder: (context, index) {
-          final cat = _categories[index];
-          final isActive = _selectedCategory == cat;
-          return GestureDetector(
-            onTap: () => setState(() => _selectedCategory = cat),
-            child: Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: isActive ? const Color(0xFF2D6A2D) : Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isActive ? const Color(0xFF2D6A2D) : const Color(0xFFE0E0E0),
-                  width: 1,
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  cat,
-                  style: TextStyle(
-                    color: isActive ? Colors.white : const Color(0xFF666666),
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildBadgesGrid(List<Map<String, dynamic>> badges, Set<String> unlockedKeys) {
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -311,7 +284,7 @@ class _BadgesScreenState extends State<BadgesScreen> with SingleTickerProviderSt
         crossAxisCount: 3,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 0.72,
+        childAspectRatio: 0.8,
       ),
       itemCount: badges.length,
       itemBuilder: (context, index) {
@@ -325,7 +298,7 @@ class _BadgesScreenState extends State<BadgesScreen> with SingleTickerProviderSt
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -357,7 +330,7 @@ class _BadgesScreenState extends State<BadgesScreen> with SingleTickerProviderSt
                   width: 54,
                   height: 54,
                   decoration: const BoxDecoration(
-                    color: Color(0xFFE0E0E0),
+                    color: Color(0xFFF5F5F5),
                     shape: BoxShape.circle,
                   ),
                   child: const Center(
@@ -366,7 +339,7 @@ class _BadgesScreenState extends State<BadgesScreen> with SingleTickerProviderSt
                 ),
               const SizedBox(height: 10),
               Text(
-                isUnlocked ? (badge['label'] ?? '') : '???',
+                badge['label'] ?? '',
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -374,17 +347,6 @@ class _BadgesScreenState extends State<BadgesScreen> with SingleTickerProviderSt
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF1A1A1A),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                isUnlocked ? (badge['description'] ?? '') : 'Badge secret',
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 9,
-                  color: Color(0xFF666666),
                 ),
               ),
             ],
@@ -397,7 +359,7 @@ class _BadgesScreenState extends State<BadgesScreen> with SingleTickerProviderSt
   Widget _buildEmptyState() {
     return const Center(
       child: Text(
-        'Aucun badge dans cette catégorie',
+        'Aucun badge disponible',
         style: TextStyle(
           color: Color(0xFF666666),
           fontSize: 14,

@@ -5,6 +5,8 @@ import '../blocs/leaderboard/leaderboard_event.dart';
 import '../blocs/leaderboard/leaderboard_state.dart';
 import '../../data/remote/supabase_service.dart';
 import '../../services/connectivity_service.dart';
+import 'roadmap_screen.dart';
+import 'versus_screen.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -57,6 +59,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RoadmapScreen())),
+            icon: const Icon(Icons.map_rounded, color: Color(0xFF2D5C14)),
+            tooltip: 'Mon Parcours',
+          ),
+        ],
       ),
       body: _checkingConnection
           ? const Center(child: CircularProgressIndicator())
@@ -201,9 +210,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
       child: Row(
         children: [
-          _tabItem('Tous', 'national'),
-          _tabItem('École', 'school'),
-          _tabItem('Classe', 'class'),
+          _tabItem('Semaine', 'weekly'),
+          _tabItem('Mois', 'monthly'),
+          _tabItem('National', 'national'),
         ],
       ),
     );
@@ -356,43 +365,49 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   }
 
   Widget _buildVersusBlock(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 22),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF3D2008), Color(0xFF5C3317)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: const Color(0xFF3D2008).withValues(alpha: 0.2), blurRadius: 15, offset: const Offset(0, 8))],
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const VersusScreen()),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-            child: const Icon(Icons.people_outline_rounded, color: Color(0xFFFAC775), size: 28),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 22),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF3D2008), Color(0xFF5C3317)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          const SizedBox(width: 15),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Mode Versus', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
-                Text('Défie un ami et gagne des XP !', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500)),
-              ],
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: const Color(0xFF3D2008).withValues(alpha: 0.2), blurRadius: 15, offset: const Offset(0, 8))],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+              child: const Icon(Icons.people_outline_rounded, color: Color(0xFFFAC775), size: 28),
             ),
-          ),
-          Container(
-            width: 34,
-            height: 34,
-            decoration: const BoxDecoration(color: Color(0xFFFAC775), shape: BoxShape.circle),
-            child: const Icon(Icons.chevron_right_rounded, color: Color(0xFFBA7517), size: 22),
-          ),
-        ],
+            const SizedBox(width: 15),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Mode Versus', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
+                  Text('Défie un ami et gagne des XP !', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500)),
+                ],
+              ),
+            ),
+            Container(
+              width: 34,
+              height: 34,
+              decoration: const BoxDecoration(color: Color(0xFFFAC775), shape: BoxShape.circle),
+              child: const Icon(Icons.chevron_right_rounded, color: Color(0xFFBA7517), size: 22),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -23,7 +23,6 @@ class QuizScreen extends StatefulWidget {
 
 class _QuizScreenState extends State<QuizScreen> {
   int _currentQuestionIndex = 0;
-  final int _score = 0;
   int _totalCorrect = 0;
   int _totalAnswered = 0;
   final DateTime _startTime = DateTime.now();
