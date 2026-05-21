@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import '../../domain/entities/leaderboard_entry.dart';
 import '../../domain/repositories/leaderboard_repository.dart';
@@ -25,6 +26,10 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
 
         final List<LeaderboardEntry> entries = [];
         int index = 1;
+        
+        // Note: Assurez-vous que la fonction RPC 'get_leaderboard' sur Supabase 
+        // utilise 'users.uuid' (text) pour la jointure et non 'users.id' (uuid) 
+        // pour éviter l'erreur "operator does not exist: uuid = text".
         
         await db.delete('leaderboard_entries', where: 'scope = ?', whereArgs: [scope]);
 
@@ -72,6 +77,47 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
         avatar: m['avatar'] as String?,
       );
     }).toList();
+  }
+
+  @override
+  Stream<List<LeaderboardEntry>> watchLeaderboard({String scope = 'national'}) {
+    // Note: Pour un vrai temps réel avec jointure, on écoute la table leaderboard_entries
+    // et on déclenche un rafraîchissement ou on mappe les données.
+    // Supabase stream ne supporte pas directement les RPC ou jointures complexes en continu.
+    // L'approche simple est d'écouter les changements et de re-fetch.
+    
+    return SupabaseService.client
+        .from('leaderboard_entries')
+        .stream(primaryKey: ['id'])
+        .eq('scope', scope)
+        .order('points', ascending: false)
+        .asyncMap((data) async {
+          // On enrichit les données avec les pseudos/avatars depuis la table users
+          // car le stream ne contient que les données de leaderboard_entries
+          final List<LeaderboardEntry> entries = [];
+          int index = 1;
+
+          for (var item in data) {
+            // On récupère les infos du user pour chaque entrée
+            // Idéalement, on pourrait mettre en cache ces infos
+            final userRes = await SupabaseService.client
+                .from('users')
+                .select('pseudo, avatar_url')
+                .eq('uuid', item['user_id'].toString())
+                .maybeSingle();
+
+            entries.add(LeaderboardEntry(
+              userId: item['user_id'],
+              pseudo: userRes?['pseudo'] ?? 'Anonyme',
+              points: item['points'],
+              position: index++,
+              scope: scope,
+              lastUpdated: DateTime.now(),
+              avatar: userRes?['avatar_url'],
+            ));
+          }
+          return entries;
+        });
   }
 
   @override

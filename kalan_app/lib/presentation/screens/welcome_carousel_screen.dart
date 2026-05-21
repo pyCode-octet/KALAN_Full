@@ -19,12 +19,12 @@ class _WelcomeCarouselScreenState extends State<WelcomeCarouselScreen> {
     {
       'title': 'Bienvenue sur KALAN',
       'description': 'Ton compagnon d\'apprentissage intelligent qui t\'accompagne partout, même sans connexion.',
-      'image': 'assets/images/kalan_logo.png',
+      'image': 'assets/images/Bonome.png',
     },
     {
       'title': 'Révise et progresse',
       'description': 'Crée tes propres fiches, passe des quiz et grimpe dans le classement pour devenir un sage !',
-      'image': 'assets/images/kalan_logo.png', // On pourrait utiliser une autre image si dispo
+      'image': 'assets/images/Bonome.png',
     },
   ];
 
@@ -52,25 +52,26 @@ class _WelcomeCarouselScreenState extends State<WelcomeCarouselScreen> {
                       children: [
                         Image.asset(
                           _pages[index]['image']!,
-                          height: 200,
+                          height: 350,
+                          fit: BoxFit.contain,
                         ),
-                        const SizedBox(height: 60),
+                        const SizedBox(height: 40),
                         Text(
                           _pages[index]['title']!,
                           textAlign: TextAlign.center,
                           style: GoogleFonts.fredoka(
                             fontSize: 32,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w700,
                             color: AppColors.primary,
                           ),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 16),
                         Text(
                           _pages[index]['description']!,
                           textAlign: TextAlign.center,
                           style: GoogleFonts.fredoka(
                             fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w400,
                             color: const Color(0xFF8A7A58),
                             height: 1.5,
                           ),

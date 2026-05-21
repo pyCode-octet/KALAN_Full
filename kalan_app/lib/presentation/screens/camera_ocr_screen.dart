@@ -3,8 +3,10 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/constants/app_colors.dart';
+import '../../services/connectivity_service.dart';
 import '../../services/ocr_service.dart';
 import 'generating_screen.dart';
+import 'manual_flashcard_create_screen.dart';
 
 class CameraOCRScreen extends StatefulWidget {
   const CameraOCRScreen({super.key});
@@ -72,6 +74,10 @@ class _CameraOCRScreenState extends State<CameraOCRScreen> {
   Future<void> _processOCR() async {
     if (_capturedImages.isEmpty) return;
 
+    if (_controller != null && _controller!.value.flashMode != FlashMode.off) {
+      await _controller!.setFlashMode(FlashMode.off);
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -84,12 +90,26 @@ class _CameraOCRScreenState extends State<CameraOCRScreen> {
       fullText.writeln(text);
     }
 
-    if (mounted) {
-      Navigator.pop(context); // Close loading dialog
+    if (!mounted) return;
+    
+    Navigator.pop(context); // Close loading dialog
+    
+    final bool isOnline = await ConnectivityService().isOnline();
+    
+    if (!mounted) return;
+    
+    if (isOnline) {
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => GeneratingScreen(ocrText: fullText.toString()),
+        ),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ManualFlashcardCreateScreen(extractedText: fullText.toString()),
         ),
       );
     }
@@ -108,7 +128,6 @@ class _CameraOCRScreenState extends State<CameraOCRScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Real camera viewfinder
           Positioned.fill(
             child: AspectRatio(
               aspectRatio: _controller!.value.aspectRatio,
@@ -116,10 +135,8 @@ class _CameraOCRScreenState extends State<CameraOCRScreen> {
             ),
           ),
           
-          // Scanning overlay guides
           _buildScanningOverlay(),
 
-          // Top bar
           Positioned(
             top: 40,
             left: 16,
@@ -150,7 +167,6 @@ class _CameraOCRScreenState extends State<CameraOCRScreen> {
             ),
           ),
 
-          // Captured images preview grid (bottom left)
           if (_capturedImages.isNotEmpty)
             Positioned(
               bottom: 140,
@@ -193,7 +209,6 @@ class _CameraOCRScreenState extends State<CameraOCRScreen> {
               ),
             ),
 
-          // Bottom controls
           Positioned(
             bottom: 40,
             left: 0,
@@ -281,7 +296,7 @@ class _CameraOCRScreenState extends State<CameraOCRScreen> {
       child: Container(
         width: 300, height: 450,
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
+          border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Stack(

@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import '../../core/utils/level_utils.dart';
 import '../blocs/user/user_bloc.dart';
 import '../blocs/user/user_state.dart';
-import '../widgets/tree_evolution.dart';
 import 'flashcard_study_screen.dart';
 import 'badges_screen.dart';
 import 'notification_screen.dart';
@@ -164,57 +163,66 @@ class HomeDashboard extends StatelessWidget {
   }
 
   Widget _buildFloatingBanner(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF2D5C14), Color(0xFF3B6D11)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF2D5C14).withValues(alpha: 0.25),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
-            ),
-            child: const Center(
-              child: Icon(Icons.auto_awesome, color: Colors.white, size: 32),
-            ),
-          ),
-          const SizedBox(width: 15),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Kalan : Ta quête du savoir !',
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.5),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  '"Chaque jour est une chance de devenir plus sage." 🌟',
-                  style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
-                ),
+    return BlocBuilder<UserBloc, UserState>(
+      builder: (context, state) {
+        final points = state is UserLoaded ? (state.profile['points'] as int? ?? 0) : 0;
+        
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF2D6A2D).withValues(alpha: 0.95),
+                const Color(0xFF2D5C14).withValues(alpha: 0.85),
               ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF2D6A2D).withValues(alpha: 0.3),
+                blurRadius: 24,
+                offset: const Offset(0, 12),
+              ),
+            ],
           ),
-        ],
-      ),
+          child: Row(
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
+                ),
+                child: const Center(
+                  child: Icon(Icons.psychology_rounded, color: Colors.white, size: 32),
+                ),
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Baobab',
+                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$points points accumulés',
+                      style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -229,41 +237,36 @@ class HomeDashboard extends StatelessWidget {
         );
       },
       child: Transform.translate(
-        offset: const Offset(0, -25),
+        offset: const Offset(0, -15), // Reduced overlap
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 20),
-          padding: const EdgeInsets.fromLTRB(20, 45, 20, 20),
+          margin: const EdgeInsets.symmetric(horizontal: 24), // Increased margin
+          padding: const EdgeInsets.fromLTRB(20, 35, 20, 20), // Reduced vertical padding
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(28), bottomRight: Radius.circular(28)),
+            borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24)),
             boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20, offset: const Offset(0, 8)),
+              BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 15, offset: const Offset(0, 5)),
             ],
             border: Border.all(color: Colors.black.withValues(alpha: 0.05), width: 1),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // ... Rest of the widget remains the same
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'TON STATUT',
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade400, fontWeight: FontWeight.w700, letterSpacing: 1),
+                      'STATUT',
+                      style: TextStyle(fontSize: 10, color: Colors.grey.shade400, fontWeight: FontWeight.w700, letterSpacing: 1),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Row(
                       children: [
                         Text(
                           levelInfo.title,
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A)),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(color: const Color(0xFFFAC775), borderRadius: BorderRadius.circular(6)),
-                          child: const Icon(Icons.star, color: Color(0xFFBA7517), size: 12),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A)),
                         ),
                       ],
                     ),
@@ -274,49 +277,24 @@ class HomeDashboard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SizedBox(
-                    width: 84,
-                    height: 84,
+                    width: 60, // Reduced circle size
+                    height: 60, // Reduced circle size
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
                         CustomPaint(
-                          size: const Size(84, 84),
+                          size: const Size(60, 60),
                           painter: OuroborosPainter(progress: progress, color: const Color(0xFF2D5C14)),
                         ),
-                        // Mascot image or fallback TreeEvolution inside the circle
+                        // Mascot image or fallback TreeEvolution
                         ClipOval(
-                          child: Image.asset(
-                            'assets/badges/humanites/ideogram-v3.0_BADGE_Pousse_kalan.jpg',
-                            width: 48,
-                            height: 48,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return TreeEvolution(stage: levelInfo.level, size: 42);
-                            },
-                          ),
-                        ),
-                        // Level number badge
-                        Positioned(
-                          bottom: 0,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2D5C14),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'NIV. ${levelInfo.level}',
-                              style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900),
-                            ),
+                          child: Text(
+                            '${levelInfo.level}',
+                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '$points / ${levelInfo.nextLevelPoints} XP',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF2D5C14)),
                   ),
                 ],
               ),
@@ -608,7 +586,7 @@ class OuroborosPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2 - 4;
-    final strokeWidth = 7.0;
+    const strokeWidth = 7.0;
 
     // Track
     final trackPaint = Paint()

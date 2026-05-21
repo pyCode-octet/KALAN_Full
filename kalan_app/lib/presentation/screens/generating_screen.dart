@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:kalan_app/presentation/blocs/deck/deck_bloc.dart';
 import 'package:kalan_app/presentation/blocs/deck/deck_event.dart';
 import 'package:kalan_app/presentation/screens/flashcard_study_screen.dart';
@@ -50,7 +49,12 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
 
-    _loadSubjects();
+    _runAutoGeneration();
+  }
+
+  Future<void> _runAutoGeneration() async {
+    await _loadSubjects();
+    _startGeneration();
   }
 
   @override
@@ -247,200 +251,7 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
 
   @override
   Widget build(BuildContext context) {
-    if (_isConfiguring) {
-      return _buildConfigUI();
-    }
     return _buildLoadingUI();
-  }
-
-  Widget _buildConfigUI() {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F2EA), // Fond beige crème conforme au HTML
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F2EA),
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1A1A), size: 24),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Créer des flashcards',
-          style: TextStyle(
-            color: Color(0xFF1A1A1A),
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Personnaliser la génération',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A1A1A),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      "Sélectionne la matière et ton niveau pour que l'IA Kalan crée des questions parfaitement adaptées.",
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF666666),
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    
-                    // Label Matière
-                    const Text(
-                      'MATIÈRE DU COURS',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF888888),
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    
-                    // Grille des matières
-                    _subjects.isEmpty
-                        ? const Center(child: CircularProgressIndicator())
-                        : GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: _subjects.length,
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 12,
-                              mainAxisSpacing: 12,
-                              childAspectRatio: 2.2,
-                            ),
-                            itemBuilder: (context, index) {
-                              final sub = _subjects[index];
-                              final label = sub['label'] as String;
-                              final color = Color(sub['color'] as int);
-                              final bgColor = Color(sub['bg_color'] as int);
-                              final isSelected = _selectedSubject == label;
-                              
-                              return GestureDetector(
-                                onTap: () => setState(() => _selectedSubject = label),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: isSelected ? bgColor : Colors.white,
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(
-                                      color: isSelected ? color : const Color(0xFFE0E0E0),
-                                      width: isSelected ? 2 : 1,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.02),
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        width: 32,
-                                        height: 32,
-                                        decoration: BoxDecoration(
-                                          color: isSelected ? color : color.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Icon(
-                                          IconData(sub['icon_code'] as int, fontFamily: 'MaterialIcons'),
-                                          color: isSelected ? Colors.white : color,
-                                          size: 18,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Text(
-                                          label,
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
-                                            color: isSelected ? color : const Color(0xFF1A1A1A),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                    const SizedBox(height: 40),
-                  ],
-                ),
-              ),
-            ),
-            
-            // Bouton de validation en bas
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
-              ),
-              child: GestureDetector(
-                onTap: _startGeneration,
-                child: Container(
-                  height: 54,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2D6A2D),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF2D6A2D).withOpacity(0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        'Générer mes flashcards',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text('🪄', style: GoogleFonts.notoEmoji(fontSize: 18)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildLoadingUI() {

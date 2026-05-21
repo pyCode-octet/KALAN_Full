@@ -1,3 +1,4 @@
+import 'package:kalan_app/presentation/screens/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -117,7 +118,7 @@ class KalanApp extends StatelessWidget {
       theme: AppTheme.lightTheme(),
       darkTheme: AppTheme.darkTheme(),
       themeMode: ThemeMode.light,
-      home: const AuthWrapper(),
+      home: const SplashScreen(),
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(

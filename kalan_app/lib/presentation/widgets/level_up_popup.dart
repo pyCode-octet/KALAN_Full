@@ -17,7 +17,19 @@ class LevelUpPopup {
       barrierLabel: 'level_up_popup',
       barrierColor: Colors.black87,
       transitionDuration: const Duration(milliseconds: 600),
-      pageBuilder: (_, __, ___) => const SizedBox.shrink(),
+      pageBuilder: (_, __, ___) => Align(
+        alignment: Alignment.topCenter,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 150),
+          child: _LevelUpContent(
+            level: level,
+            title: title,
+            icon: icon,
+            pointsReward: pointsReward,
+            flashcardsCount: flashcardsCount,
+          ),
+        ),
+      ),
       transitionBuilder: (context, animation, secondaryAnimation, child) {
         final curved = CurvedAnimation(parent: animation, curve: Curves.elasticOut);
         return Stack(
@@ -29,13 +41,7 @@ class LevelUpPopup {
               scale: curved,
               child: FadeTransition(
                 opacity: animation,
-                child: _LevelUpContent(
-                  level: level,
-                  title: title,
-                  icon: icon,
-                  pointsReward: pointsReward,
-                  flashcardsCount: flashcardsCount,
-                ),
+                child: child,
               ),
             ),
           ],

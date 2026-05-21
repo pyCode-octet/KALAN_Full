@@ -1,3 +1,4 @@
+import 'package:kalan_app/services/sync_service.dart';
 import 'package:flutter/material.dart';
 import 'package:kalan_app/data/local/database_helper.dart';
 import '../../core/constants/app_colors.dart';
@@ -22,65 +23,47 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          _buildBackgroundPattern(),
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  const SizedBox(height: 60),
-                  _buildLogo(),
-                  const SizedBox(height: 60),
-                  const Text(
-                    'Bon retour !',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Connecte-toi avec ton pseudo pour continuer ton aventure.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF8A7A58),
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                  _buildInputBox('Ton pseudo'),
-                  const SizedBox(height: 24),
-                  if (_isLoading)
-                    const CircularProgressIndicator()
-                  else
-                    KalanButton(
-                      text: 'Se connecter',
-                      onPressed: _handleLogin,
-                    ),
-                  const SizedBox(height: 40),
-                  _buildRegisterLink(),
-                ],
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            children: [
+              const SizedBox(height: 60),
+              _buildLogo(),
+              const SizedBox(height: 60),
+              const Text(
+                'Bon retour !',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
               ),
-            ),
+              const SizedBox(height: 12),
+              const Text(
+                'Connecte-toi avec ton pseudo pour continuer ton aventure.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF8A7A58),
+                ),
+              ),
+              const SizedBox(height: 40),
+              _buildInputBox('Ton pseudo'),
+              const SizedBox(height: 24),
+              if (_isLoading)
+                const CircularProgressIndicator()
+              else
+                KalanButton(
+                  text: 'Se connecter',
+                  onPressed: _handleLogin,
+                ),
+              const SizedBox(height: 40),
+              _buildRegisterLink(),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBackgroundPattern() {
-    return Positioned.fill(
-      child: Opacity(
-        opacity: 0.05,
-        child: Image.asset(
-          'assets/images/kalan_logo.png',
-          repeat: ImageRepeat.repeat,
-          scale: 10,
         ),
       ),
     );
@@ -88,9 +71,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildLogo() {
     return Image.asset(
-      'assets/images/kalan_logo.png',
-      width: 180,
-      height: 180,
+      'assets/images/LOGO-removebg-preview.png',
+      width: 220,
+      height: 220,
       fit: BoxFit.contain,
     );
   }
@@ -152,6 +135,9 @@ class _LoginScreenState extends State<LoginScreen> {
         // Enregistrer l'ID de l'utilisateur actif
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('current_user_uuid', userMap['uuid']);
+
+        // Synchroniser les données depuis le cloud
+        await SyncService.instance.syncAllFromCloud(userMap['uuid']);
 
         if (mounted) {
           Navigator.pushReplacement(

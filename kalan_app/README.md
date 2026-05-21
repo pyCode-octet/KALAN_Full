@@ -51,9 +51,9 @@ Pour connecter l'IA **Qwen-72B** (qui est le modèle en ligne par défaut), tu a
 **Oui ! Le téléchargement est entièrement automatisé et transparent pour l'utilisateur.** 
 
 ### Comment ça marche ?
-1. **Détection** : Dès que l'utilisateur tente d'importer un cours en mode offline, le module `ModelDownloader` vérifie si le modèle Gemma (`gemma3-270m-it-q8.task`) est déjà installé sur le téléphone.
+1. **Détection** : Dès que l'utilisateur tente d'importer un cours en mode offline, le module `ModelDownloader` vérifie si le modèle Gemma (`gemma3-1b-it-int4.task`) est déjà installé sur le téléphone.
 2. **Téléchargement silencieux** : S'il est absent, l'application lance automatiquement un téléchargement en tâche de fond depuis le dépôt de releases public optimisé de KALAN :
-   `https://github.com/Blackdry13579/kalan-ai-models/releases/download/v1.0/gemma3-270m-it-q8.task`
+   `https://github.com/Blackdry13579/Gemma3-1B/releases/download/V1.0/gemma3-1b-it-int4.task`
 3. **Suivi visuel** : L'écran de l'application affiche une barre de progression en temps réel de 0% à 100% à l'utilisateur.
 4. **Stockage et chargement** : Le fichier du modèle (environ 270 Mo) est stocké de manière sécurisée dans les dossiers système de l'application sur le téléphone. Lors des futures révisions, il se charge **immédiatement en moins d'une seconde** sans consommer le moindre mégaoctet de connexion internet !
 

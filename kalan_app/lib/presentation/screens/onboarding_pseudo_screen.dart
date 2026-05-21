@@ -8,7 +8,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../widgets/kalan_button.dart';
 import 'home_screen.dart';
-import 'login_screen.dart';
 
 class OnboardingPseudoScreen extends StatefulWidget {
   final Map<String, dynamic>? registrationData;
@@ -24,6 +23,7 @@ class OnboardingPseudoScreen extends StatefulWidget {
 
 class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
   final TextEditingController _pseudoController = TextEditingController();
+  int _step = 1; // 1 = Pseudo, 2 = Avatar
   int _selectedAvatar = 1;
   bool _isLoading = false;
 
@@ -31,116 +31,54 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          _buildBackgroundPattern(),
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
-                  _buildLogo(),
-                  const SizedBox(height: 35),
-                  const Text(
-                    'Choisis ton pseudo',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 27,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'C\'est avec ce pseudo que tu seras reconnu(e) par les autres élèves.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  _buildInputBox('Ton pseudo'),
-                  const SizedBox(height: 30),
-                  const Text(
-                    'Choisis ton avatar',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 27,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'C\'est l\'image qui te représentera dans KALAN.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  _buildAvatarGrid(),
-                  const SizedBox(height: 20),
-                  if (_isLoading)
-                    const CircularProgressIndicator()
-                  else
-                    Column(
-                      children: [
-                        KalanButton(
-                          text: 'Commencer mon aventure',
-                          onPressed: _handleStartAventure,
-                        ),
-                        const SizedBox(height: 20),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(builder: (_) => const LoginScreen()),
-                            );
-                          },
-                          child: const Text(
-                            'Déjà un compte ? Connecte-toi ici',
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
-                              decoration: TextDecoration.underline,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  const SizedBox(height: 25),
-                ],
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+              if (_step == 1) _buildLogo(),
+              if (_step == 2) _buildAvatarPreview(),
+              const SizedBox(height: 35),
+              Text(
+                _step == 1 ? 'Choisis ton pseudo' : 'Choisis ton avatar',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 27,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
               ),
-            ),
+              const SizedBox(height: 12),
+              Text(
+                _step == 1 
+                  ? "C'est avec ce pseudo que tu seras reconnu(e) par les autres élèves."
+                  : "C'est l'image qui te représentera dans KALAN.",
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF8A7A58),
+                ),
+              ),
+              const SizedBox(height: 24),
+              if (_step == 1) _buildInputBox('Ton pseudo'),
+              if (_step == 2) _buildAvatarGrid(),
+              const SizedBox(height: 30),
+              if (_isLoading)
+                const CircularProgressIndicator()
+              else
+                KalanButton(
+                  text: _step == 1 ? 'Suivant' : 'Commencer mon aventure',
+                  onPressed: _step == 1 ? () => setState(() => _step = 2) : _handleStartAventure,
+                ),
+              if (_step == 2) 
+                TextButton(
+                  onPressed: () => setState(() => _step = 1),
+                  child: const Text('Retour', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                ),
+            ],
           ),
-          Positioned(
-            top: 40,
-            left: 10,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: AppColors.primary, size: 28),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBackgroundPattern() {
-    return Positioned.fill(
-      child: Opacity(
-        opacity: 0.05,
-        child: Image.asset(
-          'assets/images/kalan_logo.png',
-          repeat: ImageRepeat.repeat,
-          scale: 10,
         ),
       ),
     );
@@ -148,10 +86,17 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
 
   Widget _buildLogo() {
     return Image.asset(
-      'assets/images/kalan_logo.png',
-      width: 160,
-      height: 160,
+      'assets/images/LOGO-removebg-preview.png',
+      width: 220,
+      height: 220,
       fit: BoxFit.contain,
+    );
+  }
+
+  Widget _buildAvatarPreview() {
+    return CircleAvatar(
+      radius: 60,
+      backgroundImage: AssetImage('assets/avatars/avatar$_selectedAvatar.png'),
     );
   }
 

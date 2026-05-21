@@ -18,7 +18,7 @@ class LeaderboardScreen extends StatefulWidget {
 class _LeaderboardScreenState extends State<LeaderboardScreen> {
   String _currentScope = 'national';
   bool _isOnline = true;
-  bool _checkingConnection = true;
+  final bool _checkingConnection = false; // Plus besoin de bloquer au démarrage, le Bloc gère le Loading
 
   ImageProvider _getAvatarImage(String? avatar) {
     if (avatar == null || avatar.isEmpty) {
@@ -33,19 +33,18 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   @override
   void initState() {
     super.initState();
-    _checkConnectionAndLoad();
+    // Chargement initial
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<LeaderboardBloc>().add(LoadLeaderboard(scope: _currentScope));
+    });
   }
 
-  Future<void> _checkConnectionAndLoad() async {
-    setState(() {
-      _checkingConnection = true;
-    });
+  // La connexion est gérée par le Bloc et le Repository, 
+  // on garde une version simplifiée pour l'affichage du mode offline initial.
+  Future<void> _checkConnectionAndRefresh() async {
     final online = await ConnectivityService().isOnline();
-    setState(() {
-      _isOnline = online;
-      _checkingConnection = false;
-    });
-    if (online && mounted) {
+    setState(() => _isOnline = online);
+    if (online) {
       context.read<LeaderboardBloc>().add(LoadLeaderboard(scope: _currentScope));
     }
   }
@@ -177,7 +176,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               width: double.infinity,
               height: 48,
               child: ElevatedButton.icon(
-                onPressed: _checkConnectionAndLoad,
+                onPressed: _checkConnectionAndRefresh,
                 icon: const Icon(Icons.refresh_rounded, color: Colors.white),
                 label: const Text(
                   'Réessayer',
@@ -224,7 +223,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       child: GestureDetector(
         onTap: () {
           setState(() => _currentScope = scope);
-          _checkConnectionAndLoad();
+          context.read<LeaderboardBloc>().add(LoadLeaderboard(scope: scope));
         },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),

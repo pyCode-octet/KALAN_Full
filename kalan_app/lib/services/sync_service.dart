@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:sqflite/sqflite.dart';
 import '../data/local/database_helper.dart';
 import '../data/remote/supabase_service.dart';
 
@@ -22,6 +23,50 @@ class SyncService {
 
   void dispose() {
     _connectivitySubscription?.cancel();
+  }
+
+  /// Récupère toutes les données du cloud vers le téléphone (Pull)
+  Future<void> syncAllFromCloud(String userId) async {
+    try {
+      debugPrint('[SyncService] Démarrage du Pull depuis Supabase...');
+      final db = await DatabaseHelper.instance.database;
+
+      // 1. Récupérer le profil utilisateur
+      final userProfile = await SupabaseService.client
+          .from('users')
+          .select()
+          .eq('uuid', userId)
+          .single();
+      
+      await db.insert('users', userProfile, conflictAlgorithm: ConflictAlgorithm.replace);
+
+      // 2. Récupérer les Decks
+      final decks = await SupabaseService.client
+          .from('decks')
+          .select()
+          .eq('user_id', userId);
+      
+      for (var deck in decks) {
+        await db.insert('decks', deck, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+
+      // 3. Récupérer les Flashcards associées
+      final deckUuids = decks.map((d) => d['uuid'] as String).toList();
+      if (deckUuids.isNotEmpty) {
+        final cards = await SupabaseService.client
+            .from('flashcards')
+            .select()
+            .inFilter('deck_id', deckUuids);
+        
+        for (var card in cards) {
+          await db.insert('flashcards', card, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+      }
+
+      debugPrint('[SyncService] Pull terminé avec succès !');
+    } catch (e) {
+      debugPrint('[SyncService] Erreur lors du Pull depuis Supabase : $e');
+    }
   }
 
   Future<void> processQueue() async {

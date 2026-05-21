@@ -45,7 +45,7 @@ class AboutScreen extends StatelessWidget {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: _primaryColor.withOpacity(0.1),
+                    color: _primaryColor.withValues(alpha: 0.1),
                     blurRadius: 30,
                     offset: const Offset(0, 10),
                   ),
@@ -76,7 +76,7 @@ class AboutScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: _primaryColor.withOpacity(0.1),
+                color: _primaryColor.withValues(alpha:0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Text(
@@ -147,7 +147,7 @@ class AboutScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha:0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -161,7 +161,7 @@ class AboutScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
+                  color: iconColor.withValues(alpha:0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: iconColor, size: 24),
@@ -199,10 +199,10 @@ class AboutScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _primaryColor.withOpacity(0.2), width: 1),
+        border: Border.all(color: _primaryColor.withValues(alpha:0.2), width: 1),
         boxShadow: [
           BoxShadow(
-            color: _primaryColor.withOpacity(0.05),
+            color: _primaryColor.withValues(alpha:0.05),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -216,7 +216,7 @@ class AboutScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: _primaryColor.withOpacity(0.1),
+                  color: _primaryColor.withValues(alpha:0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.psychology_rounded, color: _primaryColor, size: 24),

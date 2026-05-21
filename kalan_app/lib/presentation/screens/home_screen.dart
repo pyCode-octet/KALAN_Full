@@ -16,7 +16,6 @@ import '../blocs/quiz/quiz_state.dart';
 import '../widgets/badge_unlock_popup.dart';
 import '../widgets/level_up_popup.dart';
 import '../../core/utils/level_utils.dart';
-import '../widgets/tree_evolution.dart';
 import 'home_dashboard.dart';
 import 'library_screen.dart';
 import 'profile_screen.dart';
@@ -147,100 +146,102 @@ class _HomeScreenState extends State<HomeScreen> {
           children: _screens,
         ),
         bottomNavigationBar: SafeArea(
-          child: Container(
-            height: 80,
-            color: Colors.transparent,
+          child: SizedBox(
+            height: 70,
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                // Le fond blanc avec découpe incurvée (notch)
+                // Le fond avec notch animé qui suit l'onglet sélectionné
                 Positioned(
                   bottom: 0,
                   left: 0,
                   right: 0,
-                  height: 65,
-                  child: CustomPaint(
-                    painter: NotchedCardPainter(
-                      color: Colors.white,
-                      shadowColor: Colors.black.withValues(alpha: 0.04),
-                    ),
-                  ),
-                ),
-                // La ligne des icônes d'onglets avec les noms
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  height: 65,
-                  child: BlocBuilder<UserBloc, UserState>(
-                    builder: (context, state) {
-                      int currentStage = 1;
-                      if (state is UserLoaded) {
-                        final points = state.profile['points'] as int? ?? 0;
-                        currentStage = LevelUtils.getLevelInfo(points).level;
+                  height: 70,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final width = MediaQuery.of(context).size.width;
+                      final itemWidth = width / 5;
+                      double notchCenterX;
+                      if (_currentIndex < 2) {
+                        notchCenterX = itemWidth * _currentIndex + itemWidth / 2;
+                      } else if (_currentIndex > 2) {
+                        notchCenterX = itemWidth * _currentIndex + itemWidth / 2;
+                      } else {
+                        notchCenterX = width / 2;
                       }
-
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _navItem(0, Icons.description_outlined, Icons.description_rounded, 'Accueil'),
-                          _navItem(1, Icons.auto_stories_outlined, Icons.auto_stories_rounded, 'Librairie'),
-                          const SizedBox(width: 60), // Espace central réservé au bouton
-                          _navItem(3, null, null, 'Niveau', customIcon: TreeEvolution(stage: currentStage, size: 22)),
-                          _navItem(4, Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
-                        ],
+                      return TweenAnimationBuilder<double>(
+                        tween: Tween<double>(end: notchCenterX),
+                        duration: const Duration(milliseconds: 350),
+                        curve: Curves.easeInOutCubic,
+                        builder: (context, animatedX, child) {
+                          return CustomPaint(
+                            size: Size(width, 70),
+                            painter: _SlidingNotchPainter(
+                              notchCenterX: animatedX,
+                              backgroundColor: Colors.white,
+                            ),
+                          );
+                        },
                       );
                     },
                   ),
                 ),
-                // Le point indicateur vert glissant (placé sous le texte)
+                // Les 5 icônes de navigation
                 Positioned(
-                  bottom: 6,
+                  bottom: 0,
                   left: 0,
                   right: 0,
-                  child: AnimatedAlign(
-                    duration: const Duration(milliseconds: 320),
-                    curve: Curves.easeOutBack,
-                    alignment: Alignment(-0.8 + (_currentIndex * 0.4), 0.0),
-                    child: Container(
-                      width: 5,
-                      height: 5,
-                      decoration: const BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                ),
-                // Le grand bouton central vert encastré avec un "+"
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: GestureDetector(
-                      onTap: () => _showCreateOptions(context),
-                      child: Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
+                  height: 70,
+                  child: BlocBuilder<UserBloc, UserState>(
+                    builder: (context, state) {
+                      return Row(
+                        children: [
+                          _buildNavTab(0, Icons.home_rounded, 'Accueil'),
+                          _buildNavTab(1, Icons.menu_book_rounded, 'Librairie'),
+                          // Bouton central "+"
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => _showCreateOptions(context),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 300),
+                                    width: 52,
+                                    height: 52,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary,
+                                      shape: BoxShape.circle,
+                                      gradient: RadialGradient(
+                                        colors: [
+                                          Colors.white.withValues(alpha: 0.3),
+                                          AppColors.primary,
+                                        ],
+                                        radius: 0.5,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppColors.primary.withValues(alpha: 0.35),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 5),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(
+                                      Icons.add_rounded,
+                                      color: Colors.white,
+                                      size: 30,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.add_rounded, // Symbole "+" au milieu
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                      ),
-                    ),
+                          ),
+                          _buildNavTab(3, Icons.emoji_events_rounded, 'Niveau'),
+                          _buildNavTab(4, Icons.person_rounded, 'Profil'),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ],
@@ -362,9 +363,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   } catch (e) {
                     if (mounted) {
                       parentScaffold.showSnackBar(
-                        SnackBar(content: Text('Erreur lors de l\'import : $e')),
-                      );
-                    }
+                      SnackBar(content: Text("Erreur lors de l'import : $e")),
+                      );                    }
                   }
                 },
               ),
@@ -418,107 +418,140 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _navItem(int index, IconData? iconOutlined, IconData? iconFilled, String label, {Widget? customIcon}) {
+  Widget _buildNavTab(int index, IconData icon, String label) {
     final isSelected = _currentIndex == index;
-    return InkWell(
-      onTap: () => setState(() => _currentIndex = index),
-      borderRadius: BorderRadius.circular(20),
-      child: SizedBox(
-        width: 60,
-        height: 65,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (customIcon != null)
-              SizedBox(
-                width: 22,
-                height: 22,
-                child: Opacity(
-                  opacity: isSelected ? 1.0 : 0.6,
-                  child: customIcon,
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _currentIndex = index),
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          height: 70,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Icône qui monte quand sélectionnée
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 350),
+                curve: Curves.easeInOutCubic,
+                transform: Matrix4.translationValues(
+                  0,
+                  isSelected ? -14 : 0,
+                  0,
                 ),
-              )
-            else
-              Icon(
-                isSelected ? iconFilled : iconOutlined,
-                color: isSelected ? AppColors.primary : const Color(0xFFB0A89A),
-                size: 22,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: isSelected ? 44 : 32,
+                  height: isSelected ? 44 : 32,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.primary.withValues(alpha: 0.15)
+                        : Colors.transparent,
+                    shape: BoxShape.circle,
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.2),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Center(
+                    child: Icon(
+                      icon,
+                      color: isSelected ? AppColors.primary : Colors.grey.shade500,
+                      size: isSelected ? 24 : 22,
+                    ),
+                  ),
+                ),
               ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? AppColors.primary : const Color(0xFFB0A89A),
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              const SizedBox(height: 2),
+              // Label qui disparaît quand actif
+              AnimatedOpacity(
+                opacity: isSelected ? 0.0 : 1.0,
+                duration: const Duration(milliseconds: 200),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.grey.shade500,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class NotchedCardPainter extends CustomPainter {
-  final Color color;
-  final Color shadowColor;
+// ═══════════════════════════════════════════
+// PEINTRE DU NOTCH GLISSANT
+// ═══════════════════════════════════════════
+class _SlidingNotchPainter extends CustomPainter {
+  final double notchCenterX;
+  final Color backgroundColor;
 
-  NotchedCardPainter({required this.color, required this.shadowColor});
+  _SlidingNotchPainter({
+    required this.notchCenterX,
+    required this.backgroundColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color
+      ..color = backgroundColor
       ..style = PaintingStyle.fill;
 
-    final shadowPaint = Paint()
-      ..color = shadowColor
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-
     final path = Path();
-    
-    // Coins supérieurs de la barre (effet arrondi moderne)
-    const double topRadius = 24;
-    
+    const double topRadius = 20;
+    const double notchHalfWidth = 38.0;
+    const double notchDepth = 22.0;
+
+    // Coin supérieur gauche arrondi
     path.moveTo(0, topRadius);
     path.quadraticBezierTo(0, 0, topRadius, 0);
-    
-    double centerX = size.width / 2;
-    double notchHeight = 28;
-    
-    double startX = centerX - 45;
-    double endX = centerX + 45;
-    
-    path.lineTo(startX, 0);
-    
-    // Courbe de Bézier cubique pour une encoche centrale ultra-fluide (effet notch)
+
+    // Ligne jusqu'au début du notch
+    final double notchStart = notchCenterX - notchHalfWidth;
+    final double notchEnd = notchCenterX + notchHalfWidth;
+
+    path.lineTo(notchStart, 0);
+
+    // Courbe d'entrée du notch (descend doucement)
     path.cubicTo(
-      centerX - 25, 0,
-      centerX - 22, notchHeight,
-      centerX, notchHeight,
+      notchCenterX - notchHalfWidth * 0.55, 0,
+      notchCenterX - notchHalfWidth * 0.45, notchDepth,
+      notchCenterX, notchDepth,
     );
+
+    // Courbe de sortie du notch (remonte doucement)
     path.cubicTo(
-      centerX + 22, notchHeight,
-      centerX + 25, 0,
-      endX, 0,
+      notchCenterX + notchHalfWidth * 0.45, notchDepth,
+      notchCenterX + notchHalfWidth * 0.55, 0,
+      notchEnd, 0,
     );
-    
+
+    // Coin supérieur droit arrondi
     path.lineTo(size.width - topRadius, 0);
     path.quadraticBezierTo(size.width, 0, size.width, topRadius);
-    
-    // Lignes du bas
+
+    // Bas de la barre
     path.lineTo(size.width, size.height);
     path.lineTo(0, size.height);
     path.close();
 
-    // Peindre l'ombre au-dessus
-    canvas.drawPath(path.shift(const Offset(0, -3)), shadowPaint);
-    
-    // Peindre la forme de la barre
+    // Ombre douce
+    canvas.drawShadow(path, Colors.black.withValues(alpha: 0.08), 8, true);
+    // Barre blanche
     canvas.drawPath(path, paint);
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _SlidingNotchPainter oldDelegate) {
+    return oldDelegate.notchCenterX != notchCenterX;
+  }
 }

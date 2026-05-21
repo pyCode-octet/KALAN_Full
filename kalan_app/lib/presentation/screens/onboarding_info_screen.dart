@@ -66,101 +66,75 @@ class _OnboardingInfoScreenState extends State<OnboardingInfoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          _buildBackgroundPattern(),
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
-                  _buildLogo(),
-                  const SizedBox(height: 35),
-                  _buildProgressIndicator(),
-                  const SizedBox(height: 35),
-                  const Text(
-                    'Parle-nous un peu de toi',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 27,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Ces informations nous aideront à mieux personnaliser ton expérience.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  _buildInputBox('Ton prénom', _firstNameController),
-                  _buildInputBox('Ton nom', _lastNameController),
-                  _buildInputBox('Nom de ton école', _schoolController),
-                  _buildClassDropdown(),
-                  const SizedBox(height: 20),
-                  KalanButton(
-                    text: 'Suivant',
-                    onPressed: _handleNext,
-                  ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const OnboardingPseudoScreen(
-                            registrationData: {
-                              'first_name': '',
-                              'last_name': '',
-                              'school_name': '',
-                              'class_id': null,
-                            },
-                          ),
-                        ),
-                      );
-                    },
-                    child: const Text(
-                      'Remplir plus tard ➔',
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        decoration: TextDecoration.underline,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+              _buildLogo(),
+              const SizedBox(height: 35),
+              _buildProgressIndicator(),
+              const SizedBox(height: 35),
+              const Text(
+                'Parle-nous un peu de toi',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 27,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Ces informations nous aideront à mieux personnaliser ton expérience.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF8A7A58),
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildInputBox('Ton prénom', _firstNameController),
+              _buildInputBox('Ton nom', _lastNameController),
+              _buildInputBox('Nom de ton école', _schoolController),
+              _buildClassDropdown(),
+              const SizedBox(height: 20),
+              KalanButton(
+                text: 'Suivant',
+                onPressed: _handleNext,
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const OnboardingPseudoScreen(
+                        registrationData: {
+                          'first_name': '',
+                          'last_name': '',
+                          'school_name': '',
+                          'class_id': null,
+                        },
                       ),
                     ),
+                  );
+                },
+                child: const Text(
+                  'Remplir plus tard ➔',
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    decoration: TextDecoration.underline,
                   ),
-                  const SizedBox(height: 25),
-                ],
+                ),
               ),
-            ),
+              const SizedBox(height: 25),
+            ],
           ),
-          Positioned(
-            top: 40,
-            left: 10,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: AppColors.primary, size: 28),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBackgroundPattern() {
-    return Positioned.fill(
-      child: Opacity(
-        opacity: 0.05,
-        child: Image.asset(
-          'assets/images/kalan_logo.png',
-          repeat: ImageRepeat.repeat,
-          scale: 10,
         ),
       ),
     );
@@ -168,7 +142,7 @@ class _OnboardingInfoScreenState extends State<OnboardingInfoScreen> {
 
   Widget _buildLogo() {
     return Image.asset(
-      'assets/images/kalan_logo.png',
+      'assets/images/LOGO-removebg-preview.png',
       width: 160,
       height: 160,
       fit: BoxFit.contain,

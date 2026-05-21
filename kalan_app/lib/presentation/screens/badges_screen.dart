@@ -17,8 +17,7 @@ class BadgesScreen extends StatefulWidget {
 
 class _BadgesScreenState extends State<BadgesScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  String _selectedCategory = 'Tous';
-  final List<String> _categories = ['Tous', 'Apprentissage', 'Quiz', 'Social'];
+  final String _selectedCategory = 'Tous';
 
   @override
   void initState() {

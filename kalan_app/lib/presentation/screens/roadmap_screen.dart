@@ -7,6 +7,7 @@ import '../../data/local/database_helper.dart';
 import '../blocs/user/user_bloc.dart';
 import '../blocs/user/user_state.dart';
 import '../widgets/tree_evolution.dart';
+import '../widgets/zone_banner.dart';
 import 'quiz_screen.dart';
 import 'create_deck_screen.dart';
 
@@ -268,12 +269,12 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                               ),
 
                               // 2. Bannières des Zones de Niveaux
-                              _buildZoneBannerWidget('GRAINE', 'Niveau 1', const Color(0xFF2D6A2D), const Color(0xFFEAF3DE), 20),
-                              _buildZoneBannerWidget('BAOBAB', 'Niveau 2', const Color(0xFF854F0B), const Color(0xFFFFF3E0), 300),
-                              _buildZoneBannerWidget('FEU DE BROUSSE', 'Niveau 3', const Color(0xFFC92A2A), const Color(0xFFFFEBEE), 720),
-                              _buildZoneBannerWidget('GRIOT', 'Niveau 4', const Color(0xFFE07B39), const Color(0xFFFFFDE7), 1140),
-                              _buildZoneBannerWidget('MASQUE', 'Niveau 5', const Color(0xFF673AB7), const Color(0xFFF3E5F5), 1700),
-                              _buildZoneBannerWidget('ANCÊTRE', 'Niveau 6', const Color(0xFF009688), const Color(0xFFE0F2F1), 2260),
+                              const Positioned(top: 20 - 18, left: 20, right: 20, child: Center(child: ZoneBanner(title: 'GRAINE', levelSubtitle: 'Niveau 1', color: Color(0xFF2D6A2D), bgColor: Color(0xFFEAF3DE)))),
+                                                             const Positioned(top: 300 - 18, left: 20, right: 20, child: Center(child: ZoneBanner(title: 'BAOBAB', levelSubtitle: 'Niveau 2', color: Color(0xFF854F0B), bgColor: Color(0xFFFFF3E0)))),
+                                                             const Positioned(top: 720 - 18, left: 20, right: 20, child: Center(child: ZoneBanner(title: 'FEU DE BROUSSE', levelSubtitle: 'Niveau 3', color: Color(0xFFC92A2A), bgColor: Color(0xFFFFEBEE)))),
+                                                             const Positioned(top: 1140 - 18, left: 20, right: 20, child: Center(child: ZoneBanner(title: 'GRIOT', levelSubtitle: 'Niveau 4', color: Color(0xFFE07B39), bgColor: Color(0xFFFFFDE7)))),
+                                                             const Positioned(top: 1700 - 18, left: 20, right: 20, child: Center(child: ZoneBanner(title: 'MASQUE', levelSubtitle: 'Niveau 5', color: Color(0xFF673AB7), bgColor: Color(0xFFF3E5F5)))),
+                                                             const Positioned(top: 2260 - 18, left: 20, right: 20, child: Center(child: ZoneBanner(title: 'ANCÊTRE', levelSubtitle: 'Niveau 6', color: Color(0xFF009688), bgColor: Color(0xFFE0F2F1)))),
                               // 3. Boutons d'étapes (Nodes)
                               SizedBox(
                                 height: mapHeight,
@@ -417,46 +418,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
     );
   }
 
-  Widget _buildZoneBannerWidget(String title, String levelSubtitle, Color color, Color bgColor, double top) {
-    return Positioned(
-      top: top - 18,
-      left: 20,
-      right: 20,
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: color.withOpacity(0.3), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.02),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TreeEvolution(stage: int.parse(levelSubtitle.split(' ').last), size: 16),
-              const SizedBox(width: 8),
-              Text(
-                '$levelSubtitle : $title',
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 11,
-                  letterSpacing: 0.8,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+// Suppression de l'ancienne méthode _buildZoneBannerWidget
 
   void _showStepDetails(
     BuildContext context,

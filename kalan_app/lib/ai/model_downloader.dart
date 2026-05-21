@@ -2,8 +2,8 @@ import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter/foundation.dart';
 
 class ModelDownloader {
-  // URL de ton propre dépôt GitHub Releases contenant le modèle Gemma 3 1B (600 Mo)
-  static const String modelUrl = 'https://github.com/Blackdry13579/kalan-ai-models/releases/download/v1.0/gemma-3-1b-it-gpu-int4.task';
+  // URL du modèle Gemma 3 1B (environ 600-800 Mo)
+  static const String modelUrl = 'https://github.com/Blackdry13579/Gemma3-1B/releases/download/V1.0/gemma3-1b-it-int4.task';
 
   /// Vérifie si le modèle est déjà installé via le plugin
   static Future<bool> isModelDownloaded() async {

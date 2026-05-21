@@ -24,7 +24,7 @@ class DeckListScreen extends StatelessWidget {
       'Anglais': {'color': const Color(0xFFE07B39), 'bg': const Color(0xFFFCEFE6), 'icon': Icons.translate_rounded},
       'Français': {'color': const Color(0xFFB00020), 'bg': const Color(0xFFFDECEE), 'icon': Icons.menu_book_rounded},
       'Informatique': {'color': const Color(0xFF009688), 'bg': const Color(0xFFE0F2F1), 'icon': Icons.computer_rounded},
-      'Autre': {'color': const Color(0xFF757575), 'bg': const Color(0xFFF5F5F5), 'icon': Icons.extension_rounded},
+      'Autre': {'color': const Color(0xFF2196F3), 'bg': const Color(0xFFE3F2FD), 'icon': Icons.extension_rounded},
     };
 
     return Scaffold(

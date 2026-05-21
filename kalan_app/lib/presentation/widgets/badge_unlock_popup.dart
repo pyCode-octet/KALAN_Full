@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 
 /// Affiche un popup animé quand un badge est débloqué.
@@ -17,19 +16,25 @@ class BadgeUnlockPopup {
       barrierLabel: 'badge_popup',
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 400),
-      pageBuilder: (_, __, ___) => const SizedBox.shrink(),
+      pageBuilder: (_, __, ___) => Align(
+        alignment: Alignment.topCenter,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 150),
+          child: _BadgePopupContent(
+            label: label,
+            emoji: emoji,
+            imagePath: imagePath,
+            color: Color(color),
+          ),
+        ),
+      ),
       transitionBuilder: (context, animation, secondaryAnimation, child) {
         final curved = CurvedAnimation(parent: animation, curve: Curves.elasticOut);
         return ScaleTransition(
           scale: curved,
           child: FadeTransition(
             opacity: animation,
-            child: _BadgePopupContent(
-              label: label,
-              emoji: emoji,
-              imagePath: imagePath,
-              color: Color(color),
-            ),
+            child: child,
           ),
         );
       },

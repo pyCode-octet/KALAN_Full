@@ -10,6 +10,7 @@ import '../blocs/quiz/quiz_event.dart';
 import '../blocs/quiz/quiz_state.dart';
 import '../blocs/user/user_bloc.dart';
 import '../blocs/user/user_event.dart';
+import '../../../services/audio_service.dart';
 import 'quiz_result_screen.dart';
 
 class QuizScreen extends StatefulWidget {
@@ -33,6 +34,8 @@ class _QuizScreenState extends State<QuizScreen> {
   int _secondsRemaining = 15;
   int? _selectedIndex;
   bool _isAnswered = false;
+  String? _xpFeedback;
+  Color _xpFeedbackColor = Colors.transparent;
 
   @override
   void initState() {
@@ -68,6 +71,7 @@ class _QuizScreenState extends State<QuizScreen> {
 
   void _handleTimeout() {
     _timer?.cancel();
+    AudioService().play('wrong'); // Son pour erreur/timeout
     // On déplace la question à la fin
     setState(() {
       final currentQuestion = _quizQuestions.removeAt(_currentQuestionIndex);
@@ -119,6 +123,9 @@ class _QuizScreenState extends State<QuizScreen> {
       });
     }
 
+    // Mélanger les questions pour un ordre aléatoire
+    questions.shuffle();
+
     setState(() {
       _quizQuestions = questions;
       _isLoading = false;
@@ -165,7 +172,33 @@ class _QuizScreenState extends State<QuizScreen> {
               ? const Center(child: CircularProgressIndicator())
               : _quizQuestions.isEmpty
                 ? _buildEmptyState()
-                : _buildQuizBody(),
+                : Stack(
+                    children: [
+                      _buildQuizBody(),
+                      if (_xpFeedback != null)
+                        Center(
+                          child: AnimatedOpacity(
+                            opacity: 1.0,
+                            duration: const Duration(milliseconds: 200),
+                            child: Text(
+                              _xpFeedback!,
+                              style: TextStyle(
+                                fontSize: 40,
+                                fontWeight: FontWeight.w900,
+                                color: _xpFeedbackColor,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withOpacity(0.3),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 5),
+                                  )
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
           ),
         ),
       ),
@@ -407,12 +440,24 @@ class _QuizScreenState extends State<QuizScreen> {
 
     final isCorrect = index == _quizQuestions[_currentQuestionIndex]['a'];
     
-    if (isCorrect) {
-      _totalCorrect++;
-      context.read<UserBloc>().add(const AddPoints(10));
-    } else {
-      context.read<UserBloc>().add(const AddPoints(-5));
-    }
+    setState(() {
+      if (isCorrect) {
+        _xpFeedback = '+10 XP';
+        _xpFeedbackColor = Colors.green;
+        AudioService().play('correct');
+        _totalCorrect++;
+        context.read<UserBloc>().add(const AddPoints(10));
+      } else {
+        _xpFeedback = '-5 XP';
+        _xpFeedbackColor = Colors.red;
+        AudioService().play('wrong');
+        context.read<UserBloc>().add(const AddPoints(-5));
+      }
+    });
+
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted) setState(() => _xpFeedback = null);
+    });
 
     Future.delayed(const Duration(seconds: 2), () {
       if (!mounted) return;

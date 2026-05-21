@@ -19,7 +19,7 @@ class DatabaseHelper {
     final path = join(dbPath, filePath);
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -48,6 +48,20 @@ class DatabaseHelper {
       } catch (_) {}
       try {
         await db.execute('ALTER TABLE flashcards ADD COLUMN repetitions INTEGER DEFAULT 0');
+      } catch (_) {}
+    }
+    if (oldVersion < 5) {
+      // S'assurer que les colonnes flashcards existent pour ceux qui auraient sauté la v4
+      final columns = await db.rawQuery('PRAGMA table_info(flashcards)');
+      if (!columns.any((c) => c['name'] == 'interval')) {
+        try { await db.execute('ALTER TABLE flashcards ADD COLUMN interval INTEGER DEFAULT 0'); } catch (_) {}
+      }
+      if (!columns.any((c) => c['name'] == 'repetitions')) {
+        try { await db.execute('ALTER TABLE flashcards ADD COLUMN repetitions INTEGER DEFAULT 0'); } catch (_) {}
+      }
+
+      try {
+        await db.execute("UPDATE subjects SET color = 0xFF2196F3, bg_color = 0xFFE3F2FD WHERE id = 'Autre'");
       } catch (_) {}
     }
   }
@@ -112,6 +126,8 @@ class DatabaseHelper {
         answer TEXT NOT NULL,
         difficulty INTEGER DEFAULT 0,
         next_review DATETIME,
+        interval INTEGER DEFAULT 0,
+        repetitions INTEGER DEFAULT 0,
         is_synced INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
@@ -303,11 +319,11 @@ class DatabaseHelper {
     final subjectsCount = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM subjects')) ?? 0;
     if (subjectsCount == 0) {
       final defaultSubjects = [
-        {'id': 'Sciences', 'label': 'Sciences', 'color': 0xFF009688, 'bg_color': 0xFFE0F2F1, 'icon_code': 0xe30a}, // computer/science (computer)
-        {'id': 'Langues', 'label': 'Langues', 'color': 0xFFE07B39, 'bg_color': 0xFFFCEFE6, 'icon_code': 0xf06e4}, // language (translate)
-        {'id': 'Littérature', 'label': 'Littérature', 'color': 0xFFB00020, 'bg_color': 0xFFFDECEE, 'icon_code': 0xf05a1}, // menu_book (menu_book)
-        {'id': 'Humanités', 'label': 'Humanités', 'color': 0xFF854F0B, 'bg_color': 0xFFFAEEDA, 'icon_code': 0xf011b}, // public (public)
-        {'id': 'Autre', 'label': 'Autre', 'color': 0xFF757575, 'bg_color': 0xFFF5F5F5, 'icon_code': 0xe87d}, // extension (puzzle)
+        {'id': 'Sciences', 'label': 'Sciences', 'color': 0xFF009688, 'bg_color': 0xFFE0F2F1, 'icon_code': 0xf0178}, // science
+        {'id': 'Langues', 'label': 'Langues', 'color': 0xFFE07B39, 'bg_color': 0xFFFCEFE6, 'icon_code': 0xe69e}, // translate
+        {'id': 'Littérature', 'label': 'Littérature', 'color': 0xFFB00020, 'bg_color': 0xFFFDECEE, 'icon_code': 0xf05a1}, // menu_book
+        {'id': 'Humanités', 'label': 'Humanités', 'color': 0xFF854F0B, 'bg_color': 0xFFFAEEDA, 'icon_code': 0xe4d0}, // psychology
+        {'id': 'Autre', 'label': 'Autre', 'color': 0xFF2196F3, 'bg_color': 0xFFE3F2FD, 'icon_code': 0xe87d}, // extension
       ];
       for (var s in defaultSubjects) {
         await db.insert('subjects', s, conflictAlgorithm: ConflictAlgorithm.replace);
@@ -324,6 +340,16 @@ class DatabaseHelper {
       limit: 1,
     );
     return results.isNotEmpty ? results.first : null;
+  }
+
+  Future<int> insertDeck(Map<String, dynamic> deckData) async {
+    final db = await instance.database;
+    return await db.insert('decks', deckData, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<int> insertFlashcard(Map<String, dynamic> cardData) async {
+    final db = await instance.database;
+    return await db.insert('flashcards', cardData, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<List<Map<String, dynamic>>> getDecks(String userId) async {
