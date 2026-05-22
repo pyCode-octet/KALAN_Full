@@ -104,16 +104,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Row(
             children: [
-              _buildLogoSvg(),
-              const SizedBox(width: 8),
-              Text(
-                'KALAN',
-                style: GoogleFonts.fredoka(
-                  color: const Color(0xFF1A4D2E),
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.5,
-                ),
+              // Logo CIRCULAIRE (Grand, à gauche)
+              Image.asset(
+                'assets/images/LOGO-removebg-preview.png',
+                height: 56, 
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Icon(Icons.school, color: Color(0xFF2D6A2D), size: 30),
+              ),
+              const SizedBox(width: 6),
+              // Logo TEXTE KALAN (Petit, à droite)
+              Image.asset(
+                'assets/images/KALAN-removebg-preview.png',
+                height: 14, 
+                errorBuilder: (_, __, ___) => const Text('KALAN', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
               ),
             ],
           ),

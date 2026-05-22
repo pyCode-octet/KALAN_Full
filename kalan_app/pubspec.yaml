@@ -54,8 +54,9 @@ flutter:
   assets:
     - .env
     - assets/images/
-    - assets/audio/
+    - assets/images/
     - assets/avatars/
+    - assets/roadmap/
     - assets/badges/humanites/
     - assets/badges/langue/
     - assets/badges/litterature/
