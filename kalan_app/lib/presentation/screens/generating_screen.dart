@@ -224,24 +224,39 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
   }
 
   Future<void> _generate() async {
-    final result = await _aiService.generateFlashcards(
-      text: widget.ocrText,
-    );
-    if (mounted) {
-      setState(() {
-        _selectedSubject = result['subject'];
-        _flashcards = (result['flashcards'] as List).cast<Map<String, String>>();
-        _aiModeLabel = _labelForMode(result['mode'] as String?);
-        _aiFinished = true;
-        
-        // Si les étapes visuelles sont déjà finies, on redirige
-        if (_currentStep >= 3 && !_isRedirecting) {
-          _autoSaveAndRedirect();
-        }
-      });
+    try {
+      // Nettoyage et limitation TRÈS stricte du texte (Crash SIGSEGV si > 1024 tokens)
+      String cleanText = widget.ocrText.trim();
+      if (cleanText.length > 2000) {
+        // 2000 caractères ~ 600-700 tokens, ce qui laisse une marge de sécurité pour la réponse de l'IA
+        cleanText = "${cleanText.substring(0, 1000)}\n\n[...]\n\n${cleanText.substring(cleanText.length - 1000)}";
+      }
+
+      final result = await _aiService.generateFlashcards(
+        text: cleanText,
+      );
+      if (mounted) {
+        setState(() {
+          _selectedSubject = result['subject'];
+          _flashcards = (result['flashcards'] as List).cast<Map<String, String>>();
+          _aiModeLabel = _labelForMode(result['mode'] as String?);
+          _aiFinished = true;
+
+          // Si les étapes visuelles sont déjà finies, on redirige
+          if (_currentStep >= 3 && !_isRedirecting) {
+            _autoSaveAndRedirect();
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur lors de la génération : $e')),
+        );
+        Navigator.pop(context);
+      }
     }
   }
-
   Future<void> _autoSaveAndRedirect() async {
     if (_isRedirecting) return;
     setState(() => _isRedirecting = true);

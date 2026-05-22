@@ -15,7 +15,7 @@ class GemmaService {
     try {
       _model = await _plugin.createModel(
         modelType: ModelType.gemmaIt, 
-        maxTokens: maxTokens,
+        maxTokens: 2048,
         preferredBackend: PreferredBackend.cpu,
       );
     } catch (e) {

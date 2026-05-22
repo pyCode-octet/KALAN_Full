@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:kalan_app/domain/entities/flashcard.dart';
 import 'package:kalan_app/presentation/blocs/flashcard/flashcard_bloc.dart';
 import 'package:kalan_app/presentation/blocs/flashcard/flashcard_event.dart';
 import 'package:kalan_app/presentation/blocs/flashcard/flashcard_state.dart';
 import 'package:kalan_app/services/audio_service.dart';
-import '../../core/constants/app_colors.dart';
 import 'quiz_screen.dart';
 
 class FlashcardStudyScreen extends StatefulWidget {
@@ -22,6 +22,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
   bool _showAnswer = false;
   Timer? _timer;
   int _secondsRemaining = 5;
+  List<Flashcard> _sessionCards = [];
 
   @override
   void initState() {
@@ -43,14 +44,18 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
     });
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_secondsRemaining > 0) {
-        setState(() {
-          _secondsRemaining--;
-        });
+        if (mounted) {
+          setState(() {
+            _secondsRemaining--;
+          });
+        }
       } else {
         _timer?.cancel();
-        setState(() {
-          _showAnswer = true;
-        });
+        if (mounted) {
+          setState(() {
+            _showAnswer = true;
+          });
+        }
       }
     });
   }
@@ -81,7 +86,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
             borderRadius: BorderRadius.circular(32),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
+                color: Colors.black.withOpacity(0.1),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -162,18 +167,25 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
       body: SafeArea(
         child: BlocConsumer<FlashcardBloc, FlashcardState>(
           listener: (context, state) {
-            if (state is FlashcardLoaded && state.cards.isNotEmpty && _timer == null) {
-              _startTimer();
+            if (state is FlashcardLoaded && state.cards.isNotEmpty) {
+              if (_sessionCards.isEmpty) {
+                setState(() {
+                  final List<Flashcard> allCards = List.from(state.cards);
+                  allCards.shuffle();
+                  _sessionCards = allCards.take(5).toList();
+                });
+              }
+              if (_timer == null) {
+                _startTimer();
+              }
             }
           },
           builder: (context, state) {
-            if (state is FlashcardLoading) return const Center(child: CircularProgressIndicator());
+            if (state is FlashcardLoading && _sessionCards.isEmpty) return const Center(child: CircularProgressIndicator());
             if (state is FlashcardError) return Center(child: Text(state.message));
-            if (state is FlashcardLoaded) {
-              final allCards = state.cards;
-              // Limit the study session to exactly 5 flashcards
-              final cards = allCards.take(5).toList();
-              if (cards.isEmpty) return const Center(child: Text('Aucune carte dans ce deck.'));
+            
+            if (_sessionCards.isNotEmpty) {
+              final cards = _sessionCards;
               
               return Column(
                 children: [
@@ -182,9 +194,9 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Text(
                       '${_currentIndex + 1} sur ${cards.length}', 
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey.shade600,
+                        color: Colors.grey,
                         fontSize: 13,
                         fontFamily: 'Plus Jakarta Sans',
                       ),
@@ -192,10 +204,9 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
                   ),
                   const SizedBox(height: 16),
                   Expanded(
-                    child: GestureDetector(
-                      onTap: () {},
+                    child: Center(
                       child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
+                        duration: const Duration(milliseconds: 400),
                         transitionBuilder: (Widget child, Animation<double> animation) {
                           return RotationYTransition(animation: animation, child: child);
                         },
@@ -214,7 +225,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
                 ],
               );
             }
-            return const SizedBox.shrink();
+            return const Center(child: Text('Aucune carte dans ce deck.'));
           },
         ),
       ),
@@ -313,7 +324,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 20,
             offset: const Offset(0, 8),
           )
@@ -346,7 +357,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
             style: const TextStyle(
               fontSize: 19,
               fontWeight: FontWeight.bold,
-              color: AppColors.onBackground,
+              color: Color(0xFF1C1C1C),
               fontFamily: 'Plus Jakarta Sans',
               height: 1.4,
             ),
@@ -387,108 +398,99 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          const Text(
+            "Tu connaissais cette réponse ?",
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Plus Jakarta Sans',
+            ),
+          ),
+          const SizedBox(height: 16),
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    context.read<FlashcardBloc>().add(UpdateReview(cardUuid, 1));
-                    _nextCard(total);
-                  },
-                  child: Container(
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFCEBEB),
-                      border: Border.all(color: const Color(0xFFF3A9A9), width: 1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.close,
-                          color: Color(0xFFC92A2A),
-                          size: 16,
-                        ),
-                        SizedBox(width: 6),
-                        Text(
-                          'Je ne savais pas',
-                          style: TextStyle(
-                            color: Color(0xFFC92A2A),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            fontFamily: 'Plus Jakarta Sans',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              _buildActionButton(
+                label: "Je ne sais pas",
+                icon: Icons.close,
+                color: const Color(0xFFE24B4A),
+                onTap: () {
+                  context.read<FlashcardBloc>().add(UpdateReview(cardUuid, 1));
+                  _nextCard(total);
+                },
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    context.read<FlashcardBloc>().add(UpdateReview(cardUuid, 3));
-                    _nextCard(total);
-                  },
-                  child: Container(
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEAF3DE),
-                      border: Border.all(color: const Color(0xFFB7D98C), width: 1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.check,
-                          color: Color(0xFF2D6A2D),
-                          size: 16,
-                        ),
-                        SizedBox(width: 6),
-                        Text(
-                          'Je savais',
-                          style: TextStyle(
-                            color: Color(0xFF2D6A2D),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            fontFamily: 'Plus Jakarta Sans',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              const SizedBox(width: 20),
+              _buildActionButton(
+                label: "Je sais",
+                icon: Icons.check,
+                color: const Color(0xFF2D6A2D),
+                isPrimary: true,
+                onTap: () {
+                  context.read<FlashcardBloc>().add(UpdateReview(cardUuid, 3));
+                  _nextCard(total);
+                },
+              ),
+              const SizedBox(width: 20),
+              _buildActionButton(
+                label: "Plus tard",
+                icon: Icons.access_time,
+                color: Colors.grey,
+                onTap: () => _nextCard(total),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          GestureDetector(
-            onTap: () => _nextCard(total),
-            child: Container(
-              width: double.infinity,
-              height: 48,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF4F2EB),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Center(
-                child: Text(
-                  'Plus tard',
-                  style: TextStyle(
-                    color: Color(0xFF555555),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    fontFamily: 'Plus Jakarta Sans',
-                  ),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+    bool isPrimary = false,
+  }) {
+    final size = isPrimary ? 72.0 : 56.0;
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: isPrimary ? color : Colors.white,
+              shape: BoxShape.circle,
+              border: isPrimary ? null : Border.all(color: Colors.black.withOpacity(0.1), width: 0.5),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                )
+              ],
+            ),
+            child: Icon(
+              icon,
+              color: isPrimary ? Colors.white : color,
+              size: isPrimary ? 28 : 22,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: isPrimary ? 12 : 11,
+            fontWeight: isPrimary ? FontWeight.w700 : FontWeight.w500,
+            color: isPrimary ? color : Colors.grey,
+            fontFamily: 'Plus Jakarta Sans',
+          ),
+        ),
+      ],
     );
   }
 }

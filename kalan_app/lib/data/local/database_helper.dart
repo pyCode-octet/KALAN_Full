@@ -352,6 +352,35 @@ class DatabaseHelper {
     return await db.insert('flashcards', cardData, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
+  Future<void> insertDeckWithCards({
+    required String title,
+    String? subject,
+    String? level,
+    required List<Map<String, String>> cards,
+  }) async {
+    final db = await instance.database;
+    final String deckUuid = 'shared-${DateTime.now().millisecondsSinceEpoch}';
+    
+    await db.insert('decks', {
+      'uuid': deckUuid,
+      'user_id': 'guest',
+      'title': title,
+      'subject': subject,
+      'level': level,
+      'created_at': DateTime.now().toIso8601String(),
+    });
+
+    for (var card in cards) {
+      await db.insert('flashcards', {
+        'uuid': 'shared-card-${DateTime.now().microsecondsSinceEpoch}',
+        'deck_id': deckUuid,
+        'question': card['question'],
+        'answer': card['answer'],
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    }
+  }
+
   Future<List<Map<String, dynamic>>> getDecks(String userId) async {
     final db = await instance.database;
     return await db.query('decks', where: 'user_id = ?', whereArgs: [userId]);

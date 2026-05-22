@@ -43,7 +43,7 @@ class HomeDashboard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildHeader(context, profile),
+                      _buildHeader(context),
                       Stack(
                         clipBehavior: Clip.none,
                         children: [
@@ -53,13 +53,13 @@ class HomeDashboard extends StatelessWidget {
                               Opacity(
                                 opacity: 0.0,
                                 child: IgnorePointer(
-                                  child: _buildFloatingBanner(context),
+                                  child: _buildFloatingBanner(context, profile['pseudo'] ?? 'Ami'),
                                 ),
                               ),
                               _buildIntegratedLevelBlock(context, levelInfo, points),
                             ],
                           ),
-                          _buildFloatingBanner(context),
+                          _buildFloatingBanner(context, profile['pseudo'] ?? 'Ami'),
                         ],
                       ),
                       _buildDynamicSubjectsGrid(context, recentDecks),
@@ -78,151 +78,131 @@ class HomeDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, Map<String, dynamic> profile) {
+  Widget _buildHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              Text(
-                'Bonjour, ${profile['pseudo'] ?? 'Ami'} 👋',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A)),
+              // Logo CIRCULAIRE (Grand, à gauche)
+              Image.asset(
+                'assets/images/LOGO-removebg-preview.png',
+                height: 56, 
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Icon(Icons.school, color: Color(0xFF2D6A2D), size: 30),
+              ),
+              const SizedBox(width: 6),
+              // Logo TEXTE KALAN (Petit, à droite)
+              Image.asset(
+                'assets/images/KALAN-removebg-preview.png',
+                height: 14, 
+                errorBuilder: (_, __, ___) => const Text('KALAN', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
               ),
             ],
           ),
-          Row(
-            children: [
-              BlocBuilder<NotificationBloc, NotificationState>(
-                builder: (context, notificationState) {
-                  final bool hasUnread = notificationState is NotificationLoaded &&
-                      notificationState.notifications.any((n) => n['is_read'] == 0);
-                  
-                  return Stack(
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const NotificationScreen()),
-                          );
-                        },
-                        icon: const Icon(Icons.notifications_none_rounded, size: 26, color: Color(0xFF1A1A1A)),
-                      ),
-                      if (hasUnread)
-                        Positioned(
-                          top: 12,
-                          right: 12,
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE24B4A),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 1.5),
-                            ),
-                          ),
+          BlocBuilder<NotificationBloc, NotificationState>(
+            builder: (context, notificationState) {
+              final bool hasUnread = notificationState is NotificationLoaded &&
+                  notificationState.notifications.any((n) => n['is_read'] == 0);
+              
+              return Stack(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const NotificationScreen()),
+                      );
+                    },
+                    icon: const Icon(Icons.notifications_none_rounded, size: 26, color: Color(0xFF1A1A1A)),
+                  ),
+                  if (hasUnread)
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE24B4A),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1.5),
                         ),
-                    ],
-                  );
-                },
-              ),
-              const SizedBox(width: 8),
-              _buildAvatar(profile),
-            ],
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAvatar(Map<String, dynamic> profile) {
-    final avatarId = profile['avatar_id'];
-    final avatarUrl = profile['avatar_url'];
-
+  Widget _buildFloatingBanner(BuildContext context, String pseudo) {
     return Container(
-      width: 44,
-      height: 44,
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8C87A),
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 2),
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF4CAF50), // Vert émeraude brillant (selon image racine)
+            Color(0xFF2E7D32), // Vert moyen
+            Color(0xFF1B5E20), // Vert foncé
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          stops: [0.0, 0.5, 1.0],
+        ),
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF2E7D32).withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
-      child: ClipOval(
-        child: avatarUrl != null && avatarUrl.startsWith('http')
-            ? Image.network(avatarUrl, fit: BoxFit.cover)
-            : Image.asset(
-                'assets/avatars/avatar${avatarId ?? 1}.png',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.person, color: Colors.white)),
-              ),
-      ),
-    );
-  }
-
-  Widget _buildFloatingBanner(BuildContext context) {
-    return BlocBuilder<UserBloc, UserState>(
-      builder: (context, state) {
-        final points = state is UserLoaded ? (state.profile['points'] as int? ?? 0) : 0;
-        
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                const Color(0xFF2D6A2D).withValues(alpha: 0.95),
-                const Color(0xFF2D5C14).withValues(alpha: 0.85),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+      child: Row(
+        children: [
+          Hero(
+            tag: 'mascot_hero',
+            child: Image.asset(
+              'assets/images/Bonome.png',
+              height: 85, // Taille encore augmentée pour visibilité max
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const Icon(Icons.face_rounded, color: Colors.white, size: 40),
             ),
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF2D6A2D).withValues(alpha: 0.3),
-                blurRadius: 24,
-                offset: const Offset(0, 12),
-              ),
-            ],
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Bonjour, $pseudo 👋',
+                  style: const TextStyle(
+                    color: Colors.white, 
+                    fontSize: 20, 
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-                child: const Center(
-                  child: Icon(Icons.psychology_rounded, color: Colors.white, size: 32),
+                const SizedBox(height: 6),
+                const Text(
+                  'Prêt pour ta quête de savoir ?',
+                  style: TextStyle(
+                    color: Colors.white, 
+                    fontSize: 14, 
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 15),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Baobab',
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '$points points accumulés',
-                      style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -237,10 +217,10 @@ class HomeDashboard extends StatelessWidget {
         );
       },
       child: Transform.translate(
-        offset: const Offset(0, -15), // Reduced overlap
+        offset: const Offset(0, -15),
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 24), // Increased margin
-          padding: const EdgeInsets.fromLTRB(20, 35, 20, 20), // Reduced vertical padding
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.fromLTRB(20, 35, 20, 20),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24)),
@@ -252,7 +232,6 @@ class HomeDashboard extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // ... Rest of the widget remains the same
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -262,13 +241,9 @@ class HomeDashboard extends StatelessWidget {
                       style: TextStyle(fontSize: 10, color: Colors.grey.shade400, fontWeight: FontWeight.w700, letterSpacing: 1),
                     ),
                     const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Text(
-                          levelInfo.title,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A)),
-                        ),
-                      ],
+                    Text(
+                      levelInfo.title,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A)),
                     ),
                   ],
                 ),
@@ -277,8 +252,8 @@ class HomeDashboard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SizedBox(
-                    width: 60, // Reduced circle size
-                    height: 60, // Reduced circle size
+                    width: 60,
+                    height: 60,
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
@@ -286,12 +261,9 @@ class HomeDashboard extends StatelessWidget {
                           size: const Size(60, 60),
                           painter: OuroborosPainter(progress: progress, color: const Color(0xFF2D5C14)),
                         ),
-                        // Mascot image or fallback TreeEvolution
-                        ClipOval(
-                          child: Text(
-                            '${levelInfo.level}',
-                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
-                          ),
+                        Text(
+                          '${levelInfo.level}',
+                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
                         ),
                       ],
                     ),
@@ -306,7 +278,6 @@ class HomeDashboard extends StatelessWidget {
   }
 
   Widget _buildDynamicSubjectsGrid(BuildContext context, List<dynamic> recentDecks) {
-    // Collect stats from recentDecks or could be passed from state.stats if available
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Column(
@@ -327,7 +298,7 @@ class HomeDashboard extends StatelessWidget {
             future: DatabaseHelper.instance.getAllSubjects(),
             builder: (context, snapshot) {
               if (!snapshot.hasData) return const SizedBox(height: 100);
-              final subjects = snapshot.data!.take(4).toList(); // Take first 4 for grid
+              final subjects = snapshot.data!.take(4).toList();
               
               return GridView.builder(
                 shrinkWrap: true,
@@ -563,7 +534,7 @@ class HomeDashboard extends StatelessWidget {
       case 'histoire-géo':
         return const Color(0xFF854F0B);
       default:
-        return const Color(0xFF2196F3); // Bleu pour Autre
+        return const Color(0xFF2196F3);
     }
   }
 
@@ -588,14 +559,12 @@ class OuroborosPainter extends CustomPainter {
     final radius = size.width / 2 - 4;
     const strokeWidth = 7.0;
 
-    // Track
     final trackPaint = Paint()
       ..color = const Color(0xFFF0EEE9)
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
     canvas.drawCircle(center, radius, trackPaint);
 
-    // Progress
     final progressPaint = Paint()
       ..color = color
       ..strokeWidth = strokeWidth
@@ -610,7 +579,6 @@ class OuroborosPainter extends CustomPainter {
       progressPaint,
     );
     
-    // Serpent head simplified
     final headAngle = -math.pi / 2 + (2 * math.pi * progress);
     final headOffset = Offset(
       center.dx + radius * math.cos(headAngle),
@@ -622,5 +590,5 @@ class OuroborosPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant OuroborosPainter oldDelegate) => true;
 }

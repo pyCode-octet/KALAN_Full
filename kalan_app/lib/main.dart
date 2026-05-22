@@ -30,6 +30,8 @@ import 'package:kalan_app/presentation/screens/home_screen.dart';
 import 'package:kalan_app/presentation/screens/welcome_carousel_screen.dart';
 import 'package:kalan_app/presentation/widgets/celebration_listener.dart';
 import 'package:kalan_app/services/connectivity_service.dart';
+import 'package:kalan_app/services/deep_link_service.dart';
+import 'package:app_links/app_links.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -53,7 +55,15 @@ void main() async {
     anonKey: supabaseKey,
   );
 
-  // Initialize Local AI - Gemma will auto-initialize on first use
+  // Initialize Deep Linking
+  final appLinks = AppLinks();
+  appLinks.uriLinkStream.listen((uri) {
+    DeepLinkService.handleIncomingLink(uri);
+  });
+  
+  appLinks.getInitialLink().then((uri) {
+    if (uri != null) DeepLinkService.handleIncomingLink(uri);
+  });
 
   final dbHelper = DatabaseHelper.instance;
   final connectivity = ConnectivityService();
