@@ -139,7 +139,7 @@ class QuizResultScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFD700).withOpacity(0.15),
+                          color: const Color(0xFFFFD700).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(30),
                           border: Border.all(color: const Color(0xFFFFD700), width: 1.5),
                         ),
@@ -171,7 +171,7 @@ class QuizResultScreen extends StatelessWidget {
                             border: Border.all(color: const Color(0xFFF0EBE0)),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.02),
+                                color: Colors.black.withValues(alpha: 0.02),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
                               ),

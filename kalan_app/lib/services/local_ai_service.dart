@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../ai/gemma_service.dart';
+import '../ai/model_downloader.dart';
+import 'connectivity_service.dart';
 
 class LocalAIService {
   static final LocalAIService _instance = LocalAIService._internal();
@@ -18,27 +20,49 @@ class LocalAIService {
     'Qwen/Qwen2.5-7B-Instruct',
   ];
 
+  /// true si internet + jeton HF configuré.
+  Future<bool> canUseOnlineAI() async {
+    if (!await ConnectivityService().isOnline()) return false;
+    return _hfToken.trim().isNotEmpty;
+  }
+
+  Future<bool> isOfflineGemmaReady() => ModelDownloader.isModelDownloaded();
+
   Future<Map<String, dynamic>> generateFlashcards({
     required String text,
   }) async {
-    String detectedSubject = _detectSubjectHeuristic(text);
+    final detectedSubject = _detectSubjectHeuristic(text);
+    const level = 'Général';
 
-    // 1. Tenter d'abord la génération en ligne qui produit des fiches de qualité exceptionnelle
-    debugPrint('Mode Hybride : Tentative de génération en ligne via HuggingFace API...');
-    try {
-      final onlineResults = await _generateOnline(text, detectedSubject, 'Général').timeout(const Duration(seconds: 15));
-      if (onlineResults.isNotEmpty) {
-        debugPrint('✅ Fiches générées avec succès en ligne (HuggingFace)');
-        return {'subject': detectedSubject, 'flashcards': onlineResults};
+    // 1. En ligne : Qwen via Hugging Face (meilleure qualité)
+    if (await canUseOnlineAI()) {
+      debugPrint('[KALAN AI] Mode en ligne (HuggingFace)...');
+      try {
+        final onlineResults = await _generateOnline(text, detectedSubject, level)
+            .timeout(const Duration(seconds: 20));
+        if (onlineResults.isNotEmpty) {
+          debugPrint('[KALAN AI] ✅ Fiches générées en ligne');
+          return {
+            'subject': detectedSubject,
+            'flashcards': onlineResults,
+            'mode': 'online',
+          };
+        }
+      } catch (e) {
+        debugPrint('[KALAN AI] Échec en ligne, bascule offline : $e');
       }
-    } catch (e) {
-      debugPrint('⚠️ Inaccessible en ligne (pas d\'internet ou erreur quota), basculement vers l\'IA locale : $e');
+    } else {
+      debugPrint('[KALAN AI] Pas de réseau ou HF_TOKEN absent → mode offline');
     }
 
-    // 2. Si échec ou hors ligne, utiliser l'IA locale Gemma
-    debugPrint('Mode Offline : Utilisation de l\'IA locale (Gemma)...');
-    final offlineResults = await _generateOffline(text, detectedSubject, 'Général');
-    return {'subject': detectedSubject, 'flashcards': offlineResults};
+    // 2. Hors ligne : Gemma si installé
+    final offline = await _generateOffline(text, detectedSubject, level);
+    return {
+      'subject': detectedSubject,
+      'flashcards': offline.cards,
+      'mode': offline.mode,
+      if (offline.modelMissing) 'offlineModelMissing': true,
+    };
   }
 
   String _detectSubjectHeuristic(String text) {
@@ -123,22 +147,43 @@ class LocalAIService {
     throw Exception('Tous les modèles HuggingFace ont échoué');
   }
 
-  Future<List<Map<String, String>>> _generateOffline(String text, String subject, String level) async {
-    try {
-      if (text.trim().length < 10) {
-        return _fallbackHeuristic(text);
-      }
-
-      // Tronquer le texte pour utiliser pleinement la fenêtre de contexte de Gemma 3 1B (max 8000 car.)
-      final truncatedText = text.length > 8000 ? '${text.substring(0, 8000)}...' : text;
-
-      final prompt = _buildFlashcardPrompt(truncatedText, subject, level, isOnline: false);
-      final rawResponse = await _gemmaService.generateText(prompt, maxTokens: 1024);
-      return _parseFlashcards(rawResponse);
-    } catch (e) {
-      debugPrint('Gemma Offline Error: $e');
-      return _fallbackHeuristic(text);
+  Future<({List<Map<String, String>> cards, String mode, bool modelMissing})> _generateOffline(
+    String text,
+    String subject,
+    String level,
+  ) async {
+    if (text.trim().length < 10) {
+      return (cards: _fallbackHeuristic(text), mode: 'heuristic', modelMissing: false);
     }
+
+    final modelInstalled = await ModelDownloader.isModelDownloaded();
+    if (!modelInstalled) {
+      debugPrint('[KALAN AI] Modèle Gemma non installé → extracteur heuristique');
+      return (
+        cards: _fallbackHeuristic(text),
+        mode: 'heuristic',
+        modelMissing: true,
+      );
+    }
+
+    try {
+      debugPrint('[KALAN AI] Génération via Gemma 3 (offline)...');
+      final truncatedText = text.length > 8000 ? '${text.substring(0, 8000)}...' : text;
+      final prompt = _buildFlashcardPrompt(truncatedText, subject, level, isOnline: false);
+      final rawResponse = await _gemmaService
+          .generateText(prompt, maxTokens: 1024)
+          .timeout(const Duration(seconds: 90));
+      final parsed = _parseFlashcards(rawResponse);
+      if (parsed.isNotEmpty) {
+        debugPrint('[KALAN AI] ✅ ${parsed.length} fiches via Gemma');
+        return (cards: parsed, mode: 'gemma', modelMissing: false);
+      }
+    } catch (e) {
+      debugPrint('[KALAN AI] Erreur Gemma : $e');
+    }
+
+    debugPrint('[KALAN AI] Secours heuristique');
+    return (cards: _fallbackHeuristic(text), mode: 'heuristic', modelMissing: false);
   }
 
   String _buildFlashcardPrompt(String text, String subject, String level, {required bool isOnline}) {
@@ -154,22 +199,27 @@ Texte :
 $text
 ''';
     } else {
-      // Prompt optimisé pour Gemma 3 1B (contexte en premier, amorce à la fin)
-      return '''Texte du cours :
-$text
+      // Prompt optimisé pour Gemma 3 1B (Few-shot prompting strict)
+      return '''### Tâche
+Génère exactement 5 questions et réponses en français sur le texte fourni.
+Sois très concis.
 
-Consigne : Génère exactement 5 questions et réponses en français sur le texte ci-dessus.
-Format à suivre :
-Q1: Question 1
-R1: Réponse 1
-Q2: Question 2
-R2: Réponse 2
-Q3: Question 3
-R3: Réponse 3
-Q4: Question 4
-R4: Réponse 4
-Q5: Question 5
-R5: Réponse 5
+### Exemples
+
+Texte : La photosynthèse est le processus par lequel les plantes créent leur énergie grâce au soleil.
+Q1: Quel est le processus utilisé par les plantes ?
+R1: La photosynthèse.
+Q2: Quelle est la source d'énergie des plantes ?
+R2: Le soleil.
+
+Texte : Le Nil est le plus long fleuve d'Afrique, traversant l'Égypte.
+Q1: Quel est le plus long fleuve d'Afrique ?
+R1: Le Nil.
+Q2: Quel pays est traversé par le Nil ?
+R2: L'Égypte.
+
+### Texte actuel
+$text
 
 Q1:''';
     }
@@ -183,7 +233,7 @@ Q1:''';
       if (jsonStart != -1 && jsonEnd > jsonStart) {
         final jsonStr = raw.substring(jsonStart, jsonEnd);
         final List<dynamic> parsed = jsonDecode(jsonStr);
-        final cards = parsed.map((item) => {
+        final cards = parsed.map<Map<String, String>>((item) => {
           'question': (item['question'] ?? item['q'] ?? '').toString().trim(),
           'answer': (item['answer'] ?? item['a'] ?? '').toString().trim(),
         })
@@ -202,9 +252,9 @@ Q1:''';
     // 2. Parser le format textuel Q/R de secours (idéal pour le modèle offline)
     try {
       final List<Map<String, String>> cards = [];
-      // Expressions régulières robustes pour capturer les blocs Q: et R:
-      final qRegExp = RegExp(r'(?:Q\d*|Question\d*)\s*[:：]\s*(.*?)(?=(?:R\d*|Rép\w*\d*)\s*[:：]|$)', caseSensitive: false, dotAll: true);
-      final aRegExp = RegExp(r'(?:R\d*|Rép\w*\d*)\s*[:：]\s*(.*?)(?=(?:Q\d*|Question\d*)\s*[:：]|$)', caseSensitive: false, dotAll: true);
+      // Expressions régulières robustes pour capturer les blocs Q: et R/A:
+      final qRegExp = RegExp(r'(?:Q\d*|Question\d*)\s*[:：]\s*(.*?)(?=(?:[RA]\d*|Rép\w*\d*|Answer\d*)\s*[:：]|$)', caseSensitive: false, dotAll: true);
+      final aRegExp = RegExp(r'(?:[RA]\d*|Rép\w*\d*|Answer\d*)\s*[:：]\s*(.*?)(?=(?:Q\d*|Question\d*)\s*[:：]|$)', caseSensitive: false, dotAll: true);
       
       final qMatches = qRegExp.allMatches(raw).toList();
       final aMatches = aRegExp.allMatches(raw).toList();
@@ -235,50 +285,43 @@ Q1:''';
   }
 
   List<Map<String, String>> _fallbackHeuristic(String text) {
-    // 1. Nettoyer le texte global
+    final List<Map<String, String>> cards = [];
     final cleanText = text.replaceAll(RegExp(r'\s+'), ' ').trim();
     
-    // 2. Découper en phrases valides
+    // 1. Découper en phrases valides de manière plus robuste
     final sentences = cleanText
-        .split(RegExp(r'(?<=[.!?])\s+'))
-        .where((s) => s.trim().length > 20 && s.trim().length < 250)
+        .split(RegExp(r'(?<=[.!?;\n])\s+'))
+        .map((s) => s.trim())
+        .where((s) => s.length > 15)
         .toList();
-        
-    if (sentences.isEmpty) {
-      return [
-        {
-          'question': 'De quoi parle ce cours ?',
-          'answer': text.length > 100 ? '${text.substring(0, 100).trim()}...' : text.trim()
-        }
-      ];
-    }
 
-    // 3. Extraire les phrases qui définissent des concepts (est, sont, signifie, permet, etc.)
-    final List<Map<String, String>> cards = [];
-    final definitionKeywords = ['est ', 'sont ', 'signifie', 'définit', 'permet', 'concerne', 'sert à'];
-    
+    // 2. Extraire les phrases qui définissent des concepts (est, sont, signifie, permet, etc.)
+    final definitionKeywords = ['est ', 'sont ', 'signifie', 'définit', 'permet', 'concerne', 'sert à', 'constitue'];
     for (var sentence in sentences) {
       bool isDefinition = definitionKeywords.any((kw) => sentence.toLowerCase().contains(kw));
       if (isDefinition) {
         for (var kw in definitionKeywords) {
           final index = sentence.toLowerCase().indexOf(kw);
-          // Le mot-clé doit être au milieu de la phrase
-          if (index > 4 && index < sentence.length - 12) {
+          if (index > 3 && index < sentence.length - 10) {
             final subject = sentence.substring(0, index).trim();
             final definition = sentence.substring(index + kw.length).trim();
             
             // Nettoyage du sujet (enlever les puces, tirets, numéros)
             final cleanSubject = subject.replaceAll(RegExp(r'^[\d\.\-\s•*+–—]+'), '').trim();
             
-            if (cleanSubject.length > 2 && cleanSubject.length < 50 && definition.length > 12) {
+            if (cleanSubject.length > 2 && cleanSubject.length < 60 && definition.length > 8) {
               final capitalizedSubject = cleanSubject[0].toUpperCase() + cleanSubject.substring(1);
               final capitalizedDefinition = definition[0].toUpperCase() + definition.substring(1);
               
-              cards.add({
-                'question': 'Qu\'est-ce que : $capitalizedSubject ?',
-                'answer': 'C\'${kw.trim()} $capitalizedDefinition',
-              });
-              break;
+              // Éviter les doublons
+              final alreadyAdded = cards.any((c) => (c['question'] ?? '').contains(capitalizedSubject));
+              if (!alreadyAdded) {
+                cards.add({
+                  'question': 'Qu\'est-ce que : $capitalizedSubject ?',
+                  'answer': 'C\'${kw.trim()} $capitalizedDefinition',
+                });
+                break;
+              }
             }
           }
         }
@@ -286,14 +329,14 @@ Q1:''';
       if (cards.length >= 5) break;
     }
 
-    // 4. Si pas assez de définitions grammaticales, compléter avec des phrases informatives plus propres
+    // 3. Si pas assez de définitions grammaticales, compléter avec des phrases informatives plus propres
     if (cards.length < 5) {
       for (var sentence in sentences) {
         final cleanSentence = sentence.replaceAll(RegExp(r'^[\d\.\-\s•*+–—]+'), '').trim();
-        if (cleanSentence.length > 35) {
-          final alreadyAdded = cards.any((c) => c['answer'] == cleanSentence);
+        if (cleanSentence.length > 25) {
+          final alreadyAdded = cards.any((c) => c['answer'] == cleanSentence || (c['question'] ?? '').contains(cleanSentence.substring(0, 10)));
           if (!alreadyAdded) {
-            final summaryTitle = cleanSentence.substring(0, cleanSentence.length > 50 ? 50 : cleanSentence.length).trim();
+            final summaryTitle = cleanSentence.substring(0, cleanSentence.length > 45 ? 45 : cleanSentence.length).trim();
             cards.add({
               'question': 'Explique ce concept ou point clé :\n"$summaryTitle..." ?',
               'answer': cleanSentence,
@@ -304,12 +347,56 @@ Q1:''';
       }
     }
 
-    // 5. Ultime secours si le deck reste désespérément vide
-    if (cards.isEmpty) {
+    // 4. Si nous n'avons toujours pas 5 cartes (texte trop court, par exemple), créer des questions génériques structurées
+    if (cards.length < 5) {
+      final String shortSummary = cleanText.length > 80 ? '${cleanText.substring(0, 80)}...' : cleanText;
+      
+      final genericTemplates = [
+        (
+          q: "Quel est le thème ou sujet principal abordé dans ce cours ?",
+          a: "Ce cours traite principalement de : $shortSummary"
+        ),
+        (
+          q: "Quelle est l'idée majeure à retenir de ce document ?",
+          a: "L'idée majeure est de comprendre le concept suivant : $cleanText"
+        ),
+        (
+          q: "Explique l'importance de ce sujet dans le cadre d'un examen.",
+          a: "Ce sujet est fondamental car il pose les bases et le vocabulaire clé associés à : $shortSummary"
+        ),
+        (
+          q: "Résume ce texte en un mot-clé ou expression essentielle.",
+          a: "Le mot-clé essentiel est lié à : ${shortSummary.split(' ').take(3).join(' ')}"
+        ),
+        (
+          q: "Quelle question peut poser le professeur sur ce texte ?",
+          a: "Le professeur pourrait demander d'expliquer ou définir : $shortSummary"
+        ),
+      ];
+
+      for (var template in genericTemplates) {
+        if (cards.length >= 5) break;
+        final alreadyAdded = cards.any((c) => c['question'] == template.q);
+        if (!alreadyAdded) {
+          cards.add({
+            'question': template.q,
+            'answer': template.a,
+          });
+        }
+      }
+    }
+
+    // Sécurité absolue : S'assurer qu'il y a TOUJOURS exactement 5 cartes
+    while (cards.length < 5) {
       cards.add({
-        'question': 'Quel est le sujet clé abordé dans ce document ?',
-        'answer': cleanText.length > 150 ? '${cleanText.substring(0, 150)}...' : cleanText,
+        'question': 'Point clé additionnel ${cards.length + 1} de l\'étude',
+        'answer': cleanText.length > 100 ? '${cleanText.substring(0, 100)}...' : cleanText,
       });
+    }
+
+    // Si par erreur on dépasse 5 cartes, tronquer
+    if (cards.length > 5) {
+      return cards.sublist(0, 5);
     }
 
     return cards;

@@ -171,8 +171,6 @@ class DeckRepositoryImpl implements DeckRepository {
         });
       }
 
-      // Première génération de fiches : débloquer le badge chercheur
-      await _dbHelper.awardFlashcardBadgeIfFirst(currentUserId);
     }
 
     // 3. Sync Deck Supabase en arrière-plan (non-bloquant)

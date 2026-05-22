@@ -18,11 +18,15 @@ class LeaderboardScreen extends StatefulWidget {
 class _LeaderboardScreenState extends State<LeaderboardScreen> {
   String _currentScope = 'national';
   bool _isOnline = true;
-  final bool _checkingConnection = false; // Plus besoin de bloquer au démarrage, le Bloc gère le Loading
+  bool _checkingConnection = false;
 
   ImageProvider _getAvatarImage(String? avatar) {
     if (avatar == null || avatar.isEmpty) {
       return const AssetImage('assets/avatars/avatar1.png');
+    }
+    final intValue = int.tryParse(avatar);
+    if (intValue != null) {
+      return AssetImage('assets/avatars/avatar$intValue.png');
     }
     if (avatar.startsWith('assets/')) {
       return AssetImage(avatar);
@@ -33,17 +37,19 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Chargement initial
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<LeaderboardBloc>().add(LoadLeaderboard(scope: _currentScope));
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkConnectionAndRefresh());
   }
 
   // La connexion est gérée par le Bloc et le Repository, 
   // on garde une version simplifiée pour l'affichage du mode offline initial.
   Future<void> _checkConnectionAndRefresh() async {
+    setState(() => _checkingConnection = true);
     final online = await ConnectivityService().isOnline();
-    setState(() => _isOnline = online);
+    if (!mounted) return;
+    setState(() {
+      _isOnline = online;
+      _checkingConnection = false;
+    });
     if (online) {
       context.read<LeaderboardBloc>().add(LoadLeaderboard(scope: _currentScope));
     }
@@ -72,24 +78,19 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               ? _buildOfflineWidget()
               : BlocBuilder<LeaderboardBloc, LeaderboardState>(
                   builder: (context, state) {
-                    if (state is LeaderboardLoading) return const Center(child: CircularProgressIndicator());
-                    if (state is LeaderboardError) return Center(child: Text(state.message));
+                    if (state is LeaderboardLoading || state is LeaderboardInitial) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (state is LeaderboardError) {
+                      return _buildErrorWidget(state.message);
+                    }
                     if (state is LeaderboardLoaded) {
                       if (state.entries.isEmpty) {
-                        return Column(
-                          children: [
-                            _buildTabs(),
-                            const Expanded(
-                              child: Center(
-                                child: Text('Aucune donnée disponible.'),
-                              ),
-                            ),
-                          ],
-                        );
+                        return _buildEmptyWidget();
                       }
 
                       final topThree = state.entries.take(3).toList();
-                      final remaining = state.entries.skip(3).take(7).toList(); // Ranks 4-10
+                      final remaining = state.entries.skip(3).take(7).toList();
                       
                       final currentUserId = SupabaseService.currentUser?.id;
                       final userIndex = state.entries.indexWhere((e) => e.userId == currentUserId);
@@ -101,33 +102,87 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                           ? 'Félicitations ! Tu es au $myRank${myRank == 1 ? 'er' : 'ème'} rang mondial avec ${myEntry!.points} XP • Continue de progresser ! 🚀'
                           : 'Continue de progresser pour faire partie du classement et gagner plus d\'XP ! 🚀';
 
-                      return Column(
-                        children: [
-                          _buildTabs(),
-                          Expanded(
-                            child: SingleChildScrollView(
-                              child: Column(
-                                children: [
-                                  _buildTopThree(topThree),
-                                  const SizedBox(height: 10),
-                                  MarqueeTicker(
-                                    text: tickerMessage,
-                                  ),
-                                  const SizedBox(height: 15),
-                                  _buildCompactList(remaining),
-                                  const SizedBox(height: 20),
-                                  _buildVersusBlock(context),
-                                  const SizedBox(height: 100),
-                                ],
-                              ),
-                            ),
+                      return RefreshIndicator(
+                        onRefresh: _checkConnectionAndRefresh,
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: Column(
+                            children: [
+                              _buildTabs(),
+                              _buildTopThree(topThree),
+                              const SizedBox(height: 10),
+                              MarqueeTicker(text: tickerMessage),
+                              const SizedBox(height: 15),
+                              _buildCompactList(remaining),
+                              const SizedBox(height: 20),
+                              _buildVersusBlock(context),
+                              const SizedBox(height: 100),
+                            ],
                           ),
-                        ],
+                        ),
                       );
                     }
-                    return const SizedBox.shrink();
+                    return const Center(child: CircularProgressIndicator());
                   },
                 ),
+    );
+  }
+
+  Widget _buildEmptyWidget() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.emoji_events_outlined, size: 56, color: Color(0xFF2D5C14)),
+            const SizedBox(height: 16),
+            const Text(
+              'Le classement se remplit…',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF2A1A08)),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Joue des quiz et gagne des XP pour apparaître ici avec les autres élèves.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Colors.grey, height: 1.5),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _checkConnectionAndRefresh,
+              icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+              label: const Text('Actualiser', style: TextStyle(fontWeight: FontWeight.w800)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2D5C14),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorWidget(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.cloud_off_rounded, size: 48, color: Colors.orange),
+            const SizedBox(height: 16),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _checkConnectionAndRefresh,
+              child: const Text('Réessayer'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

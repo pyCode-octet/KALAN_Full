@@ -7,6 +7,7 @@ import 'package:kalan_app/presentation/blocs/user/user_bloc.dart';
 import 'package:kalan_app/presentation/blocs/user/user_event.dart';
 import 'package:kalan_app/presentation/screens/login_screen.dart';
 import 'package:kalan_app/presentation/screens/about_screen.dart';
+import 'package:kalan_app/presentation/screens/model_download_screen.dart';
 import 'package:kalan_app/data/local/database_helper.dart';
 import '../../core/constants/app_colors.dart';
 
@@ -49,6 +50,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildSettingTile(Icons.language_rounded, 'Langue de l\'application', _language, _showLanguagePicker),
             _buildDivider(),
             _buildSwitchTile(Icons.data_usage_rounded, 'Économie de données', 'Chargement optimisé', _dataSaver, (val) => setState(() => _dataSaver = val)),
+          ]),
+          const SizedBox(height: 24),
+          _buildSection('IA hors ligne'),
+          _buildSettingsCard([
+            _buildSettingTile(
+              Icons.psychology_outlined,
+              'IA locale Gemma',
+              'Créer des fiches sans internet (~350 Mo)',
+              () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ModelDownloadScreen()),
+                );
+                if (mounted) setState(() {});
+              },
+              iconColor: AppColors.primary,
+            ),
           ]),
           const SizedBox(height: 24),
           _buildSection('Support & Synchronisation'),
@@ -129,7 +147,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       trailing: Switch.adaptive(
         value: value,
         onChanged: onChanged,
-        activeColor: AppColors.primary,
+        activeTrackColor: AppColors.primary,
       ),
     );
   }

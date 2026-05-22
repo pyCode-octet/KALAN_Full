@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'welcome_carousel_screen.dart';
+import 'home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -34,11 +36,20 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       CurvedAnimation(parent: _controller, curve: const Interval(0.65, 1.0, curve: Curves.easeIn)),
     );
 
-    _controller.forward().then((_) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const WelcomeCarouselScreen()),
-      );
+    _controller.forward().then((_) async {
+      final prefs = await SharedPreferences.getInstance();
+      final currentUserId = prefs.getString('current_user_uuid');
+      
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => currentUserId != null
+                ? const HomeScreen()
+                : const WelcomeCarouselScreen(),
+          ),
+        );
+      }
     });
   }
 

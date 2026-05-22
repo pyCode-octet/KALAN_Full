@@ -22,26 +22,41 @@ class _ModelDownloadScreenState extends State<ModelDownloadScreen> {
 
     ModelDownloader.downloadModel().listen(
       (progress) {
-        if (mounted) {
+        if (!mounted) return;
+        if (progress < 0) {
           setState(() {
-            _progress = progress;
-            if (progress >= 1.0) {
-              _status = "Traitement du modèle...";
-            }
+            _isDownloading = false;
+            _status = 'Erreur de téléchargement';
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Échec du téléchargement. Vérifie ta connexion Wi‑Fi.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+        setState(() {
+          _progress = progress;
+          if (progress >= 1.0) {
+            _status = 'Installation terminée !';
+            _isDownloading = false;
+          }
+        });
+        if (progress >= 1.0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('IA locale installée — tu peux réviser hors ligne !')),
+          );
+          Future.delayed(const Duration(seconds: 1), () {
+            if (mounted) Navigator.pop(context, true);
           });
         }
       },
       onDone: () {
-        if (mounted) {
+        if (mounted && _progress >= 1.0 && !_status.contains('Erreur')) {
           setState(() {
             _isDownloading = false;
-            _status = "Téléchargement terminé !";
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('IA installée avec succès !')),
-          );
-          Future.delayed(const Duration(seconds: 1), () {
-            if (mounted) Navigator.pop(context);
+            _status = 'Téléchargement terminé !';
           });
         }
       },
@@ -99,7 +114,7 @@ class _ModelDownloadScreenState extends State<ModelDownloadScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
+                      color: Colors.orange.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Row(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'confetti_widget.dart';
 
 /// Affiche un popup animé quand un badge est débloqué.
 /// Appelé via BadgeUnlockPopup.show(context, ...)
@@ -14,8 +15,8 @@ class BadgeUnlockPopup {
       context: context,
       barrierDismissible: true,
       barrierLabel: 'badge_popup',
-      barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 400),
+      barrierColor: Colors.black87,
+      transitionDuration: const Duration(milliseconds: 500),
       pageBuilder: (_, __, ___) => Align(
         alignment: Alignment.topCenter,
         child: Padding(
@@ -30,12 +31,17 @@ class BadgeUnlockPopup {
       ),
       transitionBuilder: (context, animation, secondaryAnimation, child) {
         final curved = CurvedAnimation(parent: animation, curve: Curves.elasticOut);
-        return ScaleTransition(
-          scale: curved,
-          child: FadeTransition(
-            opacity: animation,
-            child: child,
-          ),
+        return Stack(
+          children: [
+            const Positioned.fill(child: ConfettiWidget()),
+            ScaleTransition(
+              scale: curved,
+              child: FadeTransition(
+                opacity: animation,
+                child: child,
+              ),
+            ),
+          ],
         );
       },
     );

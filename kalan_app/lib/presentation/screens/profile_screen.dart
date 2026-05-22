@@ -117,25 +117,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ],
           ),
-          if (!isOnline)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF7ED),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFFFEDD5)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 7, height: 7,
-                    decoration: const BoxDecoration(color: Color(0xFFF97316), shape: BoxShape.circle),
-                  ),
-                  const SizedBox(width: 6),
-                  const Text('Hors ligne', style: TextStyle(color: Color(0xFFC2410C), fontSize: 11, fontWeight: FontWeight.w700)),
-                ],
-              ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: isOnline ? const Color(0xFFF0FDF4) : const Color(0xFFFFF7ED),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: isOnline ? const Color(0xFFDCFCE7) : const Color(0xFFFFEDD5)),
             ),
+            child: Row(
+              children: [
+                Container(
+                  width: 8, height: 8,
+                  decoration: BoxDecoration(
+                    color: isOnline ? const Color(0xFF22C55E) : const Color(0xFFF97316),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  isOnline ? 'En ligne' : 'Hors ligne',
+                  style: TextStyle(
+                    color: isOnline ? const Color(0xFF166534) : const Color(0xFFC2410C),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -174,7 +183,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 4),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4))],
               ),
               child: ClipOval(child: _buildAvatarImage(profile)),
             ),
@@ -531,6 +540,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       minute: int.parse(timeParts[1]),
     );
     
+    if (!context.mounted) return;
+
     final selectedTime = await showTimePicker(
       context: context,
       initialTime: initialTime,
@@ -554,7 +565,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         _reminderTime = formattedTime;
       });
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Rappel programmé à $formattedTime ✓'),

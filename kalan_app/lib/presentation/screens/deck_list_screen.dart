@@ -64,7 +64,7 @@ class DeckListScreen extends StatelessWidget {
                 final subjectDecks = decksBySubject[subject]!;
                 final config = subjectConfigs[subject] ?? {
                   'color': AppColors.primary,
-                  'bg': AppColors.primary.withOpacity(0.1),
+                  'bg': AppColors.primary.withValues(alpha: 0.1),
                   'icon': Icons.school_rounded
                 };
 

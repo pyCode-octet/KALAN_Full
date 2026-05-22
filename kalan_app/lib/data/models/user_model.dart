@@ -78,6 +78,7 @@ class UserModel {
         'points': points,
         'level': level,
         'streak': streak,
+        'avatar_id': avatarId,
         'avatar_url': avatarId != null ? 'assets/avatars/avatar$avatarId.png' : null,
         'last_active': lastActive?.toIso8601String(),
         'created_at': createdAt.toIso8601String(),

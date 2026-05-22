@@ -8,14 +8,6 @@ import '../blocs/notification/notification_bloc.dart';
 import '../blocs/notification/notification_event.dart';
 import '../blocs/badge/badge_bloc.dart';
 import '../blocs/badge/badge_event.dart';
-import '../blocs/badge/badge_state.dart';
-import '../blocs/deck/deck_bloc.dart';
-import '../blocs/deck/deck_state.dart';
-import '../blocs/quiz/quiz_bloc.dart';
-import '../blocs/quiz/quiz_state.dart';
-import '../widgets/badge_unlock_popup.dart';
-import '../widgets/level_up_popup.dart';
-import '../../core/utils/level_utils.dart';
 import 'home_dashboard.dart';
 import 'library_screen.dart';
 import 'profile_screen.dart';
@@ -25,7 +17,6 @@ import 'camera_ocr_screen.dart';
 import 'generating_screen.dart';
 import '../../services/pdf_service.dart';
 import 'package:file_picker/file_picker.dart' as fp;
-import '../../ai/model_downloader.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -36,40 +27,14 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-  int? _lastKnownLevel;
 
   @override
   void initState() {
     super.initState();
     context.read<UserBloc>().add(LoadUserProfile());
-    _startSilentModelDownload();
-  }
-
-  void _startSilentModelDownload() async {
-    try {
-      final hasModel = await ModelDownloader.isModelDownloaded();
-      if (!hasModel) {
-        debugPrint("[KALAN AI] Modèle local manquant. Démarrage du téléchargement silencieux en arrière-plan...");
-        ModelDownloader.downloadModel().listen(
-          (progress) {
-            if (progress > 0) {
-              debugPrint("[KALAN AI] Progression téléchargement silencieux: ${(progress * 100).toInt()}%");
-            }
-          },
-          onDone: () {
-            debugPrint("[KALAN AI] Téléchargement silencieux terminé avec succès ! L'IA offline est active.");
-          },
-          onError: (e) {
-            debugPrint("[KALAN AI] Échec du téléchargement silencieux : $e. Une nouvelle tentative aura lieu au prochain démarrage.");
-          },
-          cancelOnError: true,
-        );
-      } else {
-        debugPrint("[KALAN AI] Modèle local déjà présent et opérationnel !");
-      }
-    } catch (e) {
-      debugPrint("[KALAN AI] Erreur lors de l'initialisation du téléchargement : $e");
-    }
+    context.read<BadgeBloc>().add(CheckNewBadges());
+    // Modèle local Gemma de 554 Mo : téléchargement automatique désactivé pour éviter les ralentissements/crashs.
+    // L'utilisateur pourra le télécharger explicitement via l'écran dédié dans les paramètres.
   }
 
   final List<Widget> _screens = [
@@ -82,63 +47,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocListener(
-      listeners: [
-        BlocListener<UserBloc, UserState>(
-          listener: (context, state) {
-            if (state is UserLoaded) {
-              final userId = state.profile['uuid'] ?? 'guest';
-              context.read<NotificationBloc>().add(LoadNotifications(userId));
-              // Check badges on app start/profile load
-              context.read<BadgeBloc>().add(CheckNewBadges());
-
-              // Level up detection
-              final points = state.profile['points'] as int? ?? 0;
-              final currentLevel = LevelUtils.getLevelInfo(points).level;
-
-              if (_lastKnownLevel != null && currentLevel > _lastKnownLevel!) {
-                final levelInfo = LevelUtils.getLevelInfo(points);
-                LevelUpPopup.show(
-                  context,
-                  level: levelInfo.level,
-                  title: levelInfo.title,
-                  icon: levelInfo.icon,
-                  pointsReward: 50,
-                  flashcardsCount: state.stats['flashcardCount'] ?? 0,
-                );
-              }
-              _lastKnownLevel = currentLevel;
-            }
-          },
-        ),
-        BlocListener<BadgeBloc, BadgeState>(
-          listener: (context, state) {
-            if (state is BadgeJustUnlocked) {
-              BadgeUnlockPopup.show(
-                context,
-                label: state.label,
-                emoji: state.emoji,
-                imagePath: state.imagePath,
-                color: state.color,
-              );
-            }
-          },
-        ),
-        BlocListener<DeckBloc, DeckState>(
-          listener: (context, state) {
-            if (state is DeckLoaded) {
-              context.read<BadgeBloc>().add(CheckNewBadges());
-            }
-          },
-        ),
-        BlocListener<QuizBloc, QuizState>(
-          listener: (context, state) {
-            if (state is QuizSubmitted) {
-              context.read<BadgeBloc>().add(CheckNewBadges());
-            }
-          },
-        ),
-      ],
+    return BlocListener<UserBloc, UserState>(
+      listener: (context, state) {
+        if (state is UserLoaded) {
+          final userId = state.profile['uuid'] ?? 'guest';
+          context.read<NotificationBloc>().add(LoadNotifications(userId));
+        }
+      },
       child: Scaffold(
         backgroundColor: AppColors.background,
         body: IndexedStack(

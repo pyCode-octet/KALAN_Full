@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_gemma/core/model.dart';
+import 'package:flutter_gemma/pigeon.g.dart';
 
 class GemmaService {
   final FlutterGemmaPlugin _plugin = FlutterGemmaPlugin.instance;
@@ -12,7 +13,11 @@ class GemmaService {
   Future<void> loadModel({int maxTokens = 2048}) async {
     if (_model != null) return;
     try {
-      _model = await _plugin.createModel(modelType: ModelType.gemmaIt, maxTokens: maxTokens);
+      _model = await _plugin.createModel(
+        modelType: ModelType.gemmaIt, 
+        maxTokens: maxTokens,
+        preferredBackend: PreferredBackend.cpu,
+      );
     } catch (e) {
       debugPrint('Error loading Gemma model: $e');
       rethrow;

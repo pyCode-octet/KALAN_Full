@@ -11,6 +11,8 @@ import '../blocs/quiz/quiz_state.dart';
 import '../blocs/user/user_bloc.dart';
 import '../blocs/user/user_event.dart';
 import '../../../services/audio_service.dart';
+import '../../../services/celebration_coordinator.dart';
+import '../../../services/celebration_gate.dart';
 import 'quiz_result_screen.dart';
 
 class QuizScreen extends StatefulWidget {
@@ -40,6 +42,7 @@ class _QuizScreenState extends State<QuizScreen> {
   @override
   void initState() {
     super.initState();
+    CelebrationGate.enter();
     if (widget.deckUuid != null) {
       context.read<FlashcardBloc>().add(LoadFlashcards(widget.deckUuid!));
     }
@@ -48,6 +51,8 @@ class _QuizScreenState extends State<QuizScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    CelebrationGate.exit();
+    CelebrationCoordinator.flushPending();
     super.dispose();
   }
 
@@ -188,7 +193,7 @@ class _QuizScreenState extends State<QuizScreen> {
                                 color: _xpFeedbackColor,
                                 shadows: [
                                   Shadow(
-                                    color: Colors.black.withOpacity(0.3),
+                                    color: Colors.black.withValues(alpha: 0.3),
                                     blurRadius: 10,
                                     offset: const Offset(0, 5),
                                   )
@@ -372,7 +377,7 @@ class _QuizScreenState extends State<QuizScreen> {
                         boxShadow: [
                           if (!_isAnswered)
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.01),
+                              color: Colors.black.withValues(alpha: 0.01),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             )

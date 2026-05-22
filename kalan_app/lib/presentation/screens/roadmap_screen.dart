@@ -760,7 +760,7 @@ class _RoadmapNodeButtonState extends State<RoadmapNodeButton> with SingleTicker
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: const Color(0xFFE8C87A).withOpacity(opacity * 0.6),
+                      color: const Color(0xFFE8C87A).withValues(alpha: opacity * 0.6),
                       width: 5,
                     ),
                   ),
@@ -791,7 +791,7 @@ class _RoadmapNodeButtonState extends State<RoadmapNodeButton> with SingleTicker
               color: baseColor,
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 width: 2,
               ),
             ),
@@ -885,7 +885,7 @@ class RoadmapPathPainter extends CustomPainter {
       
       // Ajouter une fine ligne séparatrice
       final separatorPaint = Paint()
-        ..color = Colors.black.withOpacity(0.04)
+        ..color = Colors.black.withValues(alpha: 0.04)
         ..strokeWidth = 2;
       canvas.drawLine(Offset(0, z['bottom']), Offset(screenWidth, z['bottom']), separatorPaint);
     }

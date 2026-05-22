@@ -147,7 +147,7 @@ class _OnboardingPseudoScreenState extends State<OnboardingPseudoScreen> {
                     width: isSelected ? 3 : 2.5,
                   ),
                   boxShadow: isSelected
-                      ? [BoxShadow(color: AppColors.primary.withOpacity(0.22), blurRadius: 6, spreadRadius: 2)]
+                      ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.22), blurRadius: 6, spreadRadius: 2)]
                       : [],
                 ),
                 child: ClipOval(

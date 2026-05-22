@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'dart:convert';
 import 'dart:async';
-import 'package:uuid/uuid.dart';
 import '../../core/constants/app_colors.dart';
 import '../../data/local/database_helper.dart';
 import '../../domain/entities/deck.dart';
@@ -20,7 +19,6 @@ class _ShareScreenState extends State<ShareScreen> {
   List<ScanResult> _scanResults = [];
   bool _isScanning = false;
   StreamSubscription? _scanSubscription;
-  BluetoothDevice? _connectedDevice;
 
   @override
   void initState() {
@@ -122,46 +120,7 @@ class _ShareScreenState extends State<ShareScreen> {
     }
   }
 
-  Future<void> _importReceivedDeck(String jsonData) async {
-    try {
-      final data = jsonDecode(jsonData);
-      if (data['type'] != 'KALAN_DECK') {
-        _showSnackBar("Format de deck invalide");
-        return;
-      }
 
-      final deckData = data['deck'];
-      final List<dynamic> flashcardsData = data['flashcards'];
-
-      final userId = SupabaseService.currentUser?.id ?? "guest";
-      
-      // On insère le deck
-      await DatabaseHelper.instance.insertDeck({
-        'uuid': deckData['uuid'] ?? const Uuid().v4(),
-        'title': '${deckData['title']} (reçu)',
-        'subject': deckData['subject'],
-        'level': deckData['level'],
-        'user_id': userId,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-
-      // On insère les flashcards
-      for (var card in flashcardsData) {
-        await DatabaseHelper.instance.insertFlashcard({
-          'uuid': card['uuid'] ?? const Uuid().v4(),
-          'deck_id': deckData['uuid'],
-          'question': card['question'],
-          'answer': card['answer'],
-          'difficulty': 0,
-          'next_review': DateTime.now().toIso8601String(),
-        });
-      }
-
-      _showSnackBar("Deck ${deckData['title']} importé avec succès !");
-    } catch (e) {
-      _showSnackBar("Erreur d'importation : $e");
-    }
-  }
 
   Future<void> _receiveDeck() async {
     _showSnackBar("Mode réception : en attente de données...");
@@ -242,7 +201,7 @@ class _ShareScreenState extends State<ShareScreen> {
       children: [
         Container(
           width: 80, height: 80,
-          decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
+          decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
           child: const Icon(Icons.bluetooth_searching_rounded, color: AppColors.primary, size: 40),
         ),
         const SizedBox(height: 16),
@@ -257,7 +216,7 @@ class _ShareScreenState extends State<ShareScreen> {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          CircleAvatar(backgroundColor: Colors.blue.withOpacity(0.1), child: const Icon(Icons.phone_android_rounded, color: Colors.blue)),
+          CircleAvatar(backgroundColor: Colors.blue.withValues(alpha: 0.1), child: const Icon(Icons.phone_android_rounded, color: Colors.blue)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

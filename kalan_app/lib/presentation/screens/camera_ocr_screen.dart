@@ -3,10 +3,8 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/constants/app_colors.dart';
-import '../../services/connectivity_service.dart';
 import '../../services/ocr_service.dart';
 import 'generating_screen.dart';
-import 'manual_flashcard_create_screen.dart';
 
 class CameraOCRScreen extends StatefulWidget {
   const CameraOCRScreen({super.key});
@@ -78,6 +76,8 @@ class _CameraOCRScreenState extends State<CameraOCRScreen> {
       await _controller!.setFlashMode(FlashMode.off);
     }
 
+    if (!mounted) return;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -94,25 +94,15 @@ class _CameraOCRScreenState extends State<CameraOCRScreen> {
     
     Navigator.pop(context); // Close loading dialog
     
-    final bool isOnline = await ConnectivityService().isOnline();
-    
     if (!mounted) return;
-    
-    if (isOnline) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => GeneratingScreen(ocrText: fullText.toString()),
-        ),
-      );
-    } else {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ManualFlashcardCreateScreen(extractedText: fullText.toString()),
-        ),
-      );
-    }
+
+    // En ligne ou hors ligne : GeneratingScreen gère Qwen → Gemma → heuristique
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GeneratingScreen(ocrText: fullText.toString()),
+      ),
+    );
   }
 
   @override
@@ -296,7 +286,7 @@ class _CameraOCRScreenState extends State<CameraOCRScreen> {
       child: Container(
         width: 300, height: 450,
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Stack(

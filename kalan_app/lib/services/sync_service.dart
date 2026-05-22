@@ -135,7 +135,10 @@ class SyncService {
               success = true;
               break;
             case 'UPDATE_LEADERBOARD':
-              await SupabaseService.client.from('leaderboard_entries').upsert(payload);
+              await SupabaseService.client.from('leaderboard_entries').upsert(
+                payload,
+                onConflict: 'user_id,scope',
+              );
               success = true;
               break;
             case 'UPDATE_USER':
@@ -150,12 +153,20 @@ class SyncService {
               final uuid = payload['uuid'];
               final int points = payload['points'];
               await SupabaseService.client.from('users').update({'points': points}).eq('uuid', uuid);
-              await SupabaseService.client.from('leaderboard_entries').upsert({
-                'user_id': uuid,
-                'points': points,
-                'last_updated': DateTime.now().toIso8601String(),
-                'scope': 'national',
-              });
+              final leaderboard = payload['leaderboard'] as Map<String, dynamic>?;
+              if (leaderboard != null) {
+                await SupabaseService.client.from('leaderboard_entries').upsert(
+                  leaderboard,
+                  onConflict: 'user_id,scope',
+                );
+              } else {
+                await SupabaseService.client.from('leaderboard_entries').upsert({
+                  'user_id': uuid,
+                  'points': points,
+                  'last_updated': DateTime.now().toIso8601String(),
+                  'scope': 'national',
+                }, onConflict: 'user_id,scope');
+              }
               success = true;
               break;
             case 'UNLOCK_BADGE':

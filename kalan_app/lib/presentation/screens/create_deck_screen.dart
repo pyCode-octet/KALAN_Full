@@ -49,6 +49,7 @@ class _CreateDeckScreenState extends State<CreateDeckScreen> {
       });
     } catch (e) {
       setState(() => _isGenerating = false);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur IA : $e')),
       );

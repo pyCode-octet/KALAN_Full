@@ -641,21 +641,6 @@ class DatabaseHelper {
     });
   }
 
-  Future<void> awardFlashcardBadgeIfFirst(String userId) async {
-    if (userId == 'guest' || userId.isEmpty) return;
-    
-    // Check if the user already has the "chercheur" badge
-    final db = await database;
-    final existing = await db.query(
-      'user_badges',
-      where: 'user_id = ? AND badge_key = ?',
-      whereArgs: [userId, 'chercheur'],
-    );
-    if (existing.isEmpty) {
-      await unlockBadge(userId, 'chercheur');
-    }
-  }
-
   /// Vérifie et attribue automatiquement tous les badges en fonction de l'activité de l'utilisateur.
   /// Retourne la liste des badges nouvellement débloqués (clés).
   Future<List<String>> checkAndAwardBadges(String userId) async {
@@ -697,6 +682,17 @@ class DatabaseHelper {
       if (subjects.length >= 2) {
         await unlockBadge(userId, 'polyglotte');
         newlyUnlocked.add('polyglotte');
+      }
+    }
+
+    // Badge "chercheur" : avoir terminé au moins 1 quiz
+    if (!unlockedKeys.contains('chercheur')) {
+      final completedQuizzes = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM quiz_results WHERE user_id = ?', [userId])
+      ) ?? 0;
+      if (completedQuizzes >= 1) {
+        await unlockBadge(userId, 'chercheur');
+        newlyUnlocked.add('chercheur');
       }
     }
 

@@ -8,7 +8,10 @@ import 'package:kalan_app/presentation/screens/flashcard_study_screen.dart';
 import '../../core/constants/app_colors.dart';
 import '../../data/local/database_helper.dart';
 import '../../services/local_ai_service.dart';
+import '../../services/connectivity_service.dart';
+import '../../ai/model_downloader.dart';
 import '../../data/repositories/deck_repository_impl.dart';
+import 'model_download_screen.dart';
 import '../blocs/user/user_bloc.dart';
 import '../blocs/user/user_event.dart';
 
@@ -25,8 +28,6 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
   List<Map<String, String>> _flashcards = [];
   String _selectedSubject = 'Littérature';
   final String _selectedLevel = 'Général';
-  List<Map<String, dynamic>> _subjects = [];
-  bool _isConfiguring = true;
 
   late AnimationController _rotationController;
   late AnimationController _pulseController;
@@ -35,6 +36,8 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
   bool _aiFinished = false;
   final Uuid _uuid = const Uuid();
   bool _isRedirecting = false;
+  bool _isOffline = false;
+  String? _aiModeLabel;
 
   @override
   void initState() {
@@ -54,7 +57,62 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
 
   Future<void> _runAutoGeneration() async {
     await _loadSubjects();
+    _isOffline = !await ConnectivityService().isOnline();
+
+    if (_isOffline && !await ModelDownloader.isModelDownloaded() && mounted) {
+      final proceed = await _showOfflineModelDialog();
+      if (!mounted) return;
+      if (proceed == _OfflineChoice.cancel) {
+        Navigator.pop(context);
+        return;
+      }
+      if (proceed == _OfflineChoice.download) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ModelDownloadScreen()),
+        );
+      }
+    }
+
+    if (!mounted) return;
     _startGeneration();
+  }
+
+  Future<_OfflineChoice> _showOfflineModelDialog() async {
+    final choice = await showDialog<_OfflineChoice>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.wifi_off_rounded, color: Colors.orange),
+            SizedBox(width: 10),
+            Expanded(child: Text('Mode hors ligne')),
+          ],
+        ),
+        content: const Text(
+          "Tu n'as pas internet. Pour de meilleures fiches, télécharge l'IA locale Gemma (~350 Mo, Wi‑Fi conseillé).\n\n"
+          'Sinon, KALAN créera des fiches simplifiées à partir de ton texte.',
+          style: TextStyle(height: 1.45),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, _OfflineChoice.cancel),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, _OfflineChoice.heuristic),
+            child: const Text('Continuer sans IA'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, _OfflineChoice.download),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Télécharger l\'IA'),
+          ),
+        ],
+      ),
+    );
+    return choice ?? _OfflineChoice.cancel;
   }
 
   @override
@@ -136,7 +194,6 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
     final subjects = await DatabaseHelper.instance.getAllSubjects();
     if (mounted) {
       setState(() {
-        _subjects = subjects;
         final detected = _detectSubject(widget.ocrText);
         if (subjects.any((s) => s['label'] == detected)) {
           _selectedSubject = detected;
@@ -148,10 +205,6 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
   }
 
   void _startGeneration() {
-    setState(() {
-      _isConfiguring = false;
-    });
-
     // Progression visuelle des étapes
     _stepTimer = Timer.periodic(const Duration(milliseconds: 1500), (timer) {
       if (!mounted) return;
@@ -178,6 +231,7 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
       setState(() {
         _selectedSubject = result['subject'];
         _flashcards = (result['flashcards'] as List).cast<Map<String, String>>();
+        _aiModeLabel = _labelForMode(result['mode'] as String?);
         _aiFinished = true;
         
         // Si les étapes visuelles sont déjà finies, on redirige
@@ -195,8 +249,11 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
     if (_flashcards.isEmpty) {
       if (mounted) {
         Navigator.pop(context);
+        final offlineHint = _isOffline
+            ? "Aucune fiche générée. Essaie avec l'IA locale installée (Paramètres → télécharger Gemma) ou un texte plus long."
+            : "Désolé, l'IA n'a pas pu générer de fiches pour ce contenu.";
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Désolé, l'IA n'a pas pu générer de fiches pour ce contenu."))
+          SnackBar(content: Text(offlineHint), duration: const Duration(seconds: 5)),
         );
       }
       return;
@@ -222,6 +279,8 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
         cards: _flashcards,
         uuid: deckUuid,
       );
+
+      if (!mounted) return;
 
       // On notifie le Bloc pour rafraîchir la liste en arrière-plan
       context.read<DeckBloc>().add(const LoadDecks());
@@ -276,11 +335,39 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
                     style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: AppColors.primary, fontFamily: 'Plus Jakarta Sans'),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    "L'IA KALAN transforme ton cours en succès",
+                  Text(
+                    _aiModeLabel ??
+                        (_isOffline
+                            ? "Mode hors ligne — l'IA locale transforme ton cours"
+                            : "L'IA KALAN transforme ton cours en succès"),
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: _isOffline ? Colors.orange.shade800 : Colors.grey,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
+                  if (_isOffline) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.wifi_off_rounded, size: 16, color: Colors.orange),
+                          SizedBox(width: 6),
+                          Text(
+                            'Sans connexion internet',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   
                   // Loader
                   SizedBox(
@@ -294,7 +381,7 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
                             child: SizedBox(
                               width: 170,
                               height: 170,
-                              child: CustomPaint(painter: DashedCirclePainter(color: AppColors.primary.withOpacity(0.4))),
+                              child: CustomPaint(painter: DashedCirclePainter(color: AppColors.primary.withValues(alpha: 0.4))),
                             ),
                           ),
                           ScaleTransition(
@@ -304,8 +391,8 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 shape: BoxShape.circle,
-                                boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.08), blurRadius: 20, spreadRadius: 8, offset: const Offset(0, 4))],
-                                border: Border.all(color: AppColors.primary.withOpacity(0.15), width: 1),
+                                boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.08), blurRadius: 20, spreadRadius: 8, offset: const Offset(0, 4))],
+                                border: Border.all(color: AppColors.primary.withValues(alpha: 0.15), width: 1),
                               ),
                               child: Center(
                                 child: ClipOval(
@@ -325,7 +412,7 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
                   // Étapes
                   Container(
                     padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 15, offset: const Offset(0, 5))]),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 15, offset: const Offset(0, 5))]),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -387,6 +474,21 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
         ],
       ),
     );
+  }
+}
+
+enum _OfflineChoice { cancel, download, heuristic }
+
+String? _labelForMode(String? mode) {
+  switch (mode) {
+    case 'online':
+      return 'IA en ligne (Qwen) — fiches de haute qualité';
+    case 'gemma':
+      return 'IA locale Gemma — génération hors ligne';
+    case 'heuristic':
+      return 'Mode simplifié — fiches extraites de ton texte';
+    default:
+      return null;
   }
 }
 

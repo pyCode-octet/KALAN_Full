@@ -2,6 +2,8 @@ import 'package:kalan_app/presentation/screens/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 import 'package:kalan_app/core/theme/app_theme.dart';
 import 'package:kalan_app/core/utils/text_scale.dart';
@@ -26,7 +28,10 @@ import 'package:kalan_app/data/repositories/leaderboard_repository_impl.dart';
 import 'package:kalan_app/services/sync_service.dart';
 import 'package:kalan_app/presentation/screens/home_screen.dart';
 import 'package:kalan_app/presentation/screens/welcome_carousel_screen.dart';
+import 'package:kalan_app/presentation/widgets/celebration_listener.dart';
 import 'package:kalan_app/services/connectivity_service.dart';
+
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -60,7 +65,10 @@ void main() async {
   final leaderboardRepo = LeaderboardRepositoryImpl(dbHelper, connectivity);
   final notificationRepo = NotificationRepositoryImpl(dbHelper, connectivity);
 
-  if (SupabaseService.currentUser != null) {
+  final prefs = await SharedPreferences.getInstance();
+  final currentUserId = prefs.getString('current_user_uuid');
+
+  if (currentUserId != null) {
     SyncService.instance.init();
     SyncService.instance.processQueue();
   }
@@ -85,7 +93,7 @@ void main() async {
             create: (_) => FlashcardBloc(flashcardRepo),
           ),
           BlocProvider<QuizBloc>(
-            create: (_) => QuizBloc(quizRepo, userRepo),
+            create: (_) => QuizBloc(quizRepo),
           ),
           BlocProvider<UserBloc>(
             create: (_) => UserBloc(userRepo),
@@ -115,16 +123,20 @@ class KalanApp extends StatelessWidget {
     return MaterialApp(
       title: 'KALAN',
       debugShowCheckedModeBanner: false,
+      navigatorKey: appNavigatorKey,
       theme: AppTheme.lightTheme(),
       darkTheme: AppTheme.darkTheme(),
       themeMode: ThemeMode.light,
       home: const SplashScreen(),
       builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaler: TextScaler.linear(TextScale.normal.factor),
+        return CelebrationListener(
+          navigatorKey: appNavigatorKey,
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.linear(TextScale.normal.factor),
+            ),
+            child: child!,
           ),
-          child: child!,
         );
       },
     );

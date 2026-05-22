@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import '../../domain/entities/leaderboard_entry.dart';
 import '../../domain/repositories/leaderboard_repository.dart';
+import '../leaderboard_sync_helper.dart';
 import '../local/database_helper.dart';
 import '../remote/supabase_service.dart';
 import '../../services/connectivity_service.dart';
@@ -19,133 +20,226 @@ class LeaderboardRepositoryImpl implements LeaderboardRepository {
 
     if (await _connectivity.isOnline()) {
       try {
-        final response = await SupabaseService.client.rpc(
-          'get_leaderboard',
-          params: {'scope_name': scope},
-        );
-
-        final List<LeaderboardEntry> entries = [];
-        int index = 1;
-        
-        // Note: Assurez-vous que la fonction RPC 'get_leaderboard' sur Supabase 
-        // utilise 'users.uuid' (text) pour la jointure et non 'users.id' (uuid) 
-        // pour éviter l'erreur "operator does not exist: uuid = text".
-        
-        await db.delete('leaderboard_entries', where: 'scope = ?', whereArgs: [scope]);
-
-        for (var item in (response as List)) {
-          final entry = LeaderboardEntry(
-            userId: item['user_uuid'],
-            pseudo: item['pseudo'],
-            points: item['total_points'],
-            position: index++,
-            scope: scope,
-            lastUpdated: DateTime.now(),
-            avatar: item['avatar_url'],
-          );
-          
-          entries.add(entry);
-          
-          await db.insert('leaderboard_entries', {
-            'user_id': entry.userId,
-            'points': entry.points,
-            'scope': scope,
-            'pseudo': entry.pseudo,
-            'avatar': entry.avatar,
-            'last_updated': DateTime.now().toIso8601String(),
-          }, conflictAlgorithm: ConflictAlgorithm.replace);
+        // 1. Optimal : RPC get_leaderboard (1 requête, pseudo/avatar inclus)
+        var entries = await _fetchViaRpc(scope);
+        if (entries.isNotEmpty) {
+          await _cacheEntries(db, scope, entries);
+          return entries;
         }
-        return entries;
+
+        // 2. Fallback : lecture directe de la table
+        entries = await _fetchViaTable(scope);
+        if (entries.isNotEmpty) {
+          await _cacheEntries(db, scope, entries);
+          return entries;
+        }
+
+        // 3. Dernier recours : construire depuis users.points
+        entries = await _fetchFromUsersTable(scope);
+        if (entries.isNotEmpty) {
+          await _cacheEntries(db, scope, entries);
+          return entries;
+        }
       } catch (e) {
-        debugPrint("Erreur RPC Leaderboard : $e");
+        debugPrint('Erreur classement Supabase : $e');
       }
     }
 
-    // Fallback local
-    final maps = await db.query('leaderboard_entries', 
-        where: 'scope = ?', whereArgs: [scope], orderBy: 'points DESC');
-    
-    int index = 1;
-    return maps.map((m) {
-      return LeaderboardEntry(
-        userId: m['user_id'] as String,
-        pseudo: m['pseudo'] as String? ?? 'Anonyme',
-        points: m['points'] as int? ?? 0,
+    return _readLocalEntries(db, scope);
+  }
+
+  /// RPC fournie côté Supabase : get_leaderboard(scope_name)
+  Future<List<LeaderboardEntry>> _fetchViaRpc(String scope) async {
+    final response = await SupabaseService.client.rpc(
+      'get_leaderboard',
+      params: {'scope_name': scope},
+    );
+
+    final List<dynamic> rows = response as List;
+    final List<LeaderboardEntry> entries = [];
+    var index = 1;
+
+    for (final item in rows) {
+      final map = Map<String, dynamic>.from(item as Map);
+      entries.add(LeaderboardEntry(
+        userId: map['user_uuid']?.toString() ?? '',
+        pseudo: map['pseudo'] as String? ?? 'Anonyme',
+        points: (map['total_points'] as num?)?.toInt() ?? 0,
         position: index++,
-        scope: m['scope'] as String? ?? scope,
-        lastUpdated: DateTime.parse(m['last_updated'] as String? ?? DateTime.now().toIso8601String()),
-        avatar: m['avatar'] as String?,
+        scope: scope,
+        lastUpdated: DateTime.now(),
+        avatar: map['avatar_url']?.toString(),
+      ));
+    }
+    return entries;
+  }
+
+  Future<List<LeaderboardEntry>> _fetchViaTable(String scope) async {
+    final response = await SupabaseService.client
+        .from('leaderboard_entries')
+        .select('user_id, points, scope, pseudo, avatar, last_updated')
+        .eq('scope', scope)
+        .order('points', ascending: false)
+        .limit(100);
+
+    final List<dynamic> rows = response as List;
+    final List<LeaderboardEntry> entries = [];
+    var index = 1;
+
+    for (final item in rows) {
+      entries.add(LeaderboardEntry(
+        userId: item['user_id'].toString(),
+        pseudo: item['pseudo'] as String? ?? 'Anonyme',
+        points: (item['points'] as num?)?.toInt() ?? 0,
+        position: index++,
+        scope: scope,
+        lastUpdated: DateTime.tryParse(item['last_updated']?.toString() ?? '') ?? DateTime.now(),
+        avatar: item['avatar']?.toString(),
+      ));
+    }
+    return entries;
+  }
+
+  Future<List<LeaderboardEntry>> _fetchFromUsersTable(String scope) async {
+    final response = await SupabaseService.client
+        .from('users')
+        .select('uuid, pseudo, avatar_id, points')
+        .order('points', ascending: false)
+        .limit(100);
+
+    final List<dynamic> rows = response as List;
+    final List<LeaderboardEntry> entries = [];
+    var index = 1;
+
+    for (final item in rows) {
+      final pts = (item['points'] as num?)?.toInt() ?? 0;
+      if (pts <= 0) continue;
+      entries.add(LeaderboardEntry(
+        userId: item['uuid'].toString(),
+        pseudo: item['pseudo'] as String? ?? 'Anonyme',
+        points: pts,
+        position: index++,
+        scope: scope,
+        lastUpdated: DateTime.now(),
+        avatar: item['avatar_id']?.toString(),
+      ));
+    }
+    return entries;
+  }
+
+  Future<void> _cacheEntries(
+    Database db,
+    String scope,
+    List<LeaderboardEntry> entries,
+  ) async {
+    await db.delete('leaderboard_entries', where: 'scope = ?', whereArgs: [scope]);
+    for (final entry in entries) {
+      await db.insert(
+        'leaderboard_entries',
+        {
+          'user_id': entry.userId,
+          'points': entry.points,
+          'scope': scope,
+          'pseudo': entry.pseudo,
+          'avatar': entry.avatar,
+          'last_updated': entry.lastUpdated.toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
       );
-    }).toList();
+    }
+  }
+
+  Future<List<LeaderboardEntry>> _readLocalEntries(Database db, String scope) async {
+    final maps = await db.query(
+      'leaderboard_entries',
+      where: 'scope = ?',
+      whereArgs: [scope],
+      orderBy: 'points DESC',
+    );
+
+    var index = 1;
+    return maps
+        .map(
+          (m) => LeaderboardEntry(
+            userId: m['user_id'] as String,
+            pseudo: m['pseudo'] as String? ?? 'Anonyme',
+            points: m['points'] as int? ?? 0,
+            position: index++,
+            scope: m['scope'] as String? ?? scope,
+            lastUpdated: DateTime.tryParse(m['last_updated'] as String? ?? '') ?? DateTime.now(),
+            avatar: m['avatar'] as String?,
+          ),
+        )
+        .toList();
   }
 
   @override
-  Stream<List<LeaderboardEntry>> watchLeaderboard({String scope = 'national'}) {
-    // Note: Pour un vrai temps réel avec jointure, on écoute la table leaderboard_entries
-    // et on déclenche un rafraîchissement ou on mappe les données.
-    // Supabase stream ne supporte pas directement les RPC ou jointures complexes en continu.
-    // L'approche simple est d'écouter les changements et de re-fetch.
-    
-    return SupabaseService.client
-        .from('leaderboard_entries')
-        .stream(primaryKey: ['id'])
-        .eq('scope', scope)
-        .order('points', ascending: false)
-        .asyncMap((data) async {
-          // On enrichit les données avec les pseudos/avatars depuis la table users
-          // car le stream ne contient que les données de leaderboard_entries
-          final List<LeaderboardEntry> entries = [];
-          int index = 1;
-
-          for (var item in data) {
-            // On récupère les infos du user pour chaque entrée
-            // Idéalement, on pourrait mettre en cache ces infos
-            final userRes = await SupabaseService.client
-                .from('users')
-                .select('pseudo, avatar_url')
-                .eq('uuid', item['user_id'].toString())
-                .maybeSingle();
-
-            entries.add(LeaderboardEntry(
-              userId: item['user_id'],
-              pseudo: userRes?['pseudo'] ?? 'Anonyme',
-              points: item['points'],
-              position: index++,
-              scope: scope,
-              lastUpdated: DateTime.now(),
-              avatar: userRes?['avatar_url'],
-            ));
-          }
-          return entries;
-        });
+  Stream<List<LeaderboardEntry>> watchLeaderboard({String scope = 'national'}) async* {
+    yield await getLeaderboard(scope: scope);
   }
 
   @override
   Future<void> updateUserPoints(int points) async {
-    final db = await _dbHelper.database;
     final user = SupabaseService.currentUser;
     if (user == null) return;
 
-    final data = {
-      'user_id': user.id,
-      'points': points,
-      'last_updated': DateTime.now().toIso8601String(),
-      'scope': 'national',
-    };
+    final db = await _dbHelper.database;
+    final maps = await db.query('users', where: 'uuid = ?', whereArgs: [user.id], limit: 1);
+    final userProfile = maps.isNotEmpty ? maps.first : <String, dynamic>{};
 
-    // 1. Local
-    await db.insert('leaderboard_entries', data, conflictAlgorithm: ConflictAlgorithm.replace);
-    await db.update('users', {'points': points}, where: 'uuid = ?', whereArgs: [user.id]);
+    final payload = LeaderboardSyncHelper.entryPayload(
+      userId: user.id,
+      points: points,
+      profile: userProfile,
+    );
 
-    // 2. Supabase
-    if (await _connectivity.isOnline()) {
-      try {
-        await SupabaseService.client.from('leaderboard_entries').upsert(data);
-      } catch (e) {
-        await _addToSyncQueue('UPDATE_LEADERBOARD', data);
-      }
-    } else {
-      await _addToSyncQueue('UPDATE_LEADERBOARD', data);
+    await _upsertLeaderboard(db, payload);
+  }
+
+  /// Synchronise une entrée classement (appelée aussi depuis UserRepository).
+  Future<void> syncLeaderboardEntry({
+    required String userId,
+    required int points,
+    required Map<String, dynamic> profile,
+    String scope = 'national',
+  }) async {
+    final db = await _dbHelper.database;
+    final payload = LeaderboardSyncHelper.entryPayload(
+      userId: userId,
+      points: points,
+      profile: profile,
+      scope: scope,
+    );
+    await _upsertLeaderboard(db, payload);
+  }
+
+  Future<void> _upsertLeaderboard(Database db, Map<String, dynamic> payload) async {
+    await db.insert(
+      'leaderboard_entries',
+      {
+        'user_id': payload['user_id'],
+        'points': payload['points'],
+        'scope': payload['scope'],
+        'pseudo': payload['pseudo'],
+        'avatar': payload['avatar'],
+        'last_updated': payload['last_updated'],
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+
+    if (!await _connectivity.isOnline()) {
+      await _addToSyncQueue('UPDATE_LEADERBOARD', payload);
+      return;
+    }
+
+    try {
+      await SupabaseService.client.from('leaderboard_entries').upsert(
+        payload,
+        onConflict: 'user_id,scope',
+      );
+    } catch (e) {
+      debugPrint('Upsert leaderboard : $e');
+      await _addToSyncQueue('UPDATE_LEADERBOARD', payload);
     }
   }
 

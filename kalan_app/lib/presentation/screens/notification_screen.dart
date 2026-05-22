@@ -179,7 +179,7 @@ class _NotificationScreenState extends State<NotificationScreen> with TickerProv
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -252,15 +252,15 @@ class _NotificationScreenState extends State<NotificationScreen> with TickerProv
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          color: isRead ? Colors.white.withOpacity(0.7) : Colors.white,
+          color: isRead ? Colors.white.withValues(alpha: 0.7) : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isRead ? const Color(0xFFF0EBE0) : AppColors.primary.withOpacity(0.1),
+            color: isRead ? const Color(0xFFF0EBE0) : AppColors.primary.withValues(alpha: 0.1),
             width: isRead ? 1 : 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -348,7 +348,7 @@ class _NotificationScreenState extends State<NotificationScreen> with TickerProv
               color: Color(0xFFF0F7F0),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.notifications_off_outlined, size: 64, color: AppColors.primary.withOpacity(0.5)),
+            child: Icon(Icons.notifications_off_outlined, size: 64, color: AppColors.primary.withValues(alpha: 0.5)),
           ),
           const SizedBox(height: 24),
           Text(
@@ -380,7 +380,7 @@ class AfricanWatermarkPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF2E7D32).withOpacity(0.04)
+      ..color = const Color(0xFF2E7D32).withValues(alpha: 0.04)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 

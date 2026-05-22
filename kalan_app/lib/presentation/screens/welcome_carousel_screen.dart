@@ -97,7 +97,7 @@ class _WelcomeCarouselScreenState extends State<WelcomeCarouselScreen> {
                         decoration: BoxDecoration(
                           color: _currentPage == index
                               ? AppColors.primary
-                              : AppColors.primary.withOpacity(0.2),
+                              : AppColors.primary.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),

@@ -17,7 +17,6 @@ class BadgesScreen extends StatefulWidget {
 
 class _BadgesScreenState extends State<BadgesScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final String _selectedCategory = 'Tous';
 
   @override
   void initState() {
@@ -35,23 +34,7 @@ class _BadgesScreenState extends State<BadgesScreen> with SingleTickerProviderSt
     super.dispose();
   }
 
-  List<Map<String, dynamic>> _getFilteredBadges(List<Map<String, dynamic>> allBadges, Set<String> unlockedKeys) {
-    List<Map<String, dynamic>> filtered = allBadges;
 
-    // 1. Filtrer par onglet (Tous / Obtenus / A debloquer)
-    if (_tabController.index == 1) {
-      filtered = filtered.where((b) => unlockedKeys.contains(b['id'])).toList();
-    } else if (_tabController.index == 2) {
-      filtered = filtered.where((b) => !unlockedKeys.contains(b['id'])).toList();
-    }
-
-    // 2. Filtrer par categorie
-    if (_selectedCategory != 'Tous') {
-      filtered = filtered.where((b) => b['category']?.toString().toLowerCase() == _selectedCategory.toLowerCase()).toList();
-    }
-
-    return filtered;
-  }
 
   @override
   Widget build(BuildContext context) {

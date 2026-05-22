@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:sqflite/sqflite.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/repositories/user_repository.dart';
@@ -6,6 +7,7 @@ import '../../core/utils/level_utils.dart';
 import '../local/database_helper.dart';
 import '../remote/supabase_service.dart';
 import '../../services/connectivity_service.dart';
+import '../leaderboard_sync_helper.dart';
 
 class UserRepositoryImpl implements UserRepository {
   final DatabaseHelper _dbHelper;
@@ -282,26 +284,47 @@ class UserRepositoryImpl implements UserRepository {
       ...updates,
     };
 
+    final leaderboardPayload = LeaderboardSyncHelper.entryPayload(
+      userId: userId,
+      points: newPoints,
+      profile: profile,
+    );
+
+    await db.insert(
+      'leaderboard_entries',
+      {
+        'user_id': userId,
+        'points': newPoints,
+        'scope': 'national',
+        'pseudo': leaderboardPayload['pseudo'],
+        'avatar': leaderboardPayload['avatar'],
+        'last_updated': leaderboardPayload['last_updated'],
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+
     if (isOnline) {
       try {
         await SupabaseService.client
             .from('users')
             .update(updates)
             .eq('uuid', userId);
-        
-        await SupabaseService.client
-            .from('leaderboard_entries')
-            .upsert({
-              'user_id': userId,
-              'points': newPoints,
-              'last_updated': DateTime.now().toIso8601String(),
-              'scope': 'national',
-            });
+
+        await SupabaseService.client.from('leaderboard_entries').upsert(
+          leaderboardPayload,
+          onConflict: 'user_id,scope',
+        );
       } catch (e) {
-        await _addToSyncQueue('UPDATE_USER_POINTS', syncPayload);
+        await _addToSyncQueue('UPDATE_USER_POINTS', {
+          ...syncPayload,
+          'leaderboard': leaderboardPayload,
+        });
       }
     } else {
-      await _addToSyncQueue('UPDATE_USER_POINTS', syncPayload);
+      await _addToSyncQueue('UPDATE_USER_POINTS', {
+        ...syncPayload,
+        'leaderboard': leaderboardPayload,
+      });
     }
   }
 
