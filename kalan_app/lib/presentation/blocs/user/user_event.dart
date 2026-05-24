@@ -29,3 +29,19 @@ class UpdateUserProfile extends UserEvent {
   @override
   List<Object?> get props => [pseudo, avatar, avatarId, school, className, firstName, lastName];
 }
+
+class SearchFriends extends UserEvent {
+  final String query;
+  const SearchFriends(this.query);
+  @override
+  List<Object?> get props => [query];
+}
+
+class AddFriend extends UserEvent {
+  final Map<String, dynamic> friend;
+  const AddFriend(this.friend);
+  @override
+  List<Object?> get props => [friend];
+}
+
+class LoadFriends extends UserEvent {}

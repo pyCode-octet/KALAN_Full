@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/utils/level_utils.dart';
 import '../blocs/user/user_bloc.dart';
 import '../blocs/user/user_event.dart';
 import '../blocs/user/user_state.dart';
-import '../widgets/tree_evolution.dart';
 import 'badges_screen.dart';
 import 'login_screen.dart';
 import 'about_screen.dart';
+import 'roadmap_screen.dart';
 import '../../data/local/database_helper.dart';
 import '../../data/remote/supabase_service.dart';
 
@@ -21,15 +20,25 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
   String _reminderTime = '19:00';
+  late TabController _tabController;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    // Refresh profile and stats when entering the screen
+    _tabController = TabController(length: 3, vsync: this);
     context.read<UserBloc>().add(LoadUserProfile());
+    context.read<UserBloc>().add(LoadFriends());
     _loadReminderTime();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadReminderTime() async {
@@ -43,10 +52,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Theme(
       data: Theme.of(context).copyWith(
-        textTheme: GoogleFonts.fredokaTextTheme(Theme.of(context).textTheme),
+        textTheme: GoogleFonts.plusJakartaSansTextTheme(Theme.of(context).textTheme),
       ),
       child: Scaffold(
-        backgroundColor: Colors.white,
+        resizeToAvoidBottomInset: true, // Crucial pour le clavier
+        backgroundColor: const Color(0xFFF5F2EA),
         body: BlocBuilder<UserBloc, UserState>(
           builder: (context, state) {
             if (state is UserLoading) return const Center(child: CircularProgressIndicator());
@@ -54,39 +64,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (state is UserLoaded) {
               final profile = state.profile;
               final stats = state.stats;
-              final badges = state.badges;
               final points = profile['points'] as int? ?? 0;
               final levelInfo = LevelUtils.getLevelInfo(points);
 
-              return Stack(
-                children: [
-                  // Watermark Flutter
-                  Positioned.fill(
-                    child: Opacity(
-                      opacity: 0.03,
-                      child: CustomPaint(
-                        painter: FlutterWatermarkPainter(),
-                      ),
-                    ),
-                  ),
-
-                  SafeArea(
-                    child: SingleChildScrollView(
-                      child: Column(
+              return SafeArea(
+                child: Column(
+                  children: [
+                    _buildHeader(context, state.isOnline),
+                    _buildIdentity(context, profile),
+                    const SizedBox(height: 20),
+                    _buildTabBar(),
+                    Expanded(
+                      child: TabBarView(
+                        controller: _tabController,
                         children: [
-                          _buildHeader(context, state.isOnline),
-                          _buildIdentity(context, profile, levelInfo, points),
-                          _buildStatsGrid(stats, profile),
-                          _buildBadgesSection(context, badges),
-                          // _buildPersonalInfoSection(context, profile),
-                          _buildSettingsSection(context),
-                          _buildLogoutButton(context),
-                          const SizedBox(height: 40),
+                          _buildProfileTab(context, profile, stats, state.badges, levelInfo, points),
+                          _buildProgressionTab(profile, stats),
+                          _buildFriendsTab(state),
                         ],
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               );
             }
             return const SizedBox.shrink();
@@ -104,35 +103,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Row(
             children: [
-              // Logo CIRCULAIRE (Grand, à gauche)
-              Image.asset(
-                'assets/images/LOGO-removebg-preview.png',
-                height: 56, 
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const Icon(Icons.school, color: Color(0xFF2D6A2D), size: 30),
-              ),
+              Image.asset('assets/images/LOGO-removebg-preview.png', height: 50, fit: BoxFit.contain),
               const SizedBox(width: 6),
-              // Logo TEXTE KALAN (Petit, à droite)
-              Image.asset(
-                'assets/images/KALAN-removebg-preview.png',
-                height: 14, 
-                errorBuilder: (_, __, ___) => const Text('KALAN', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
-              ),
+              Image.asset('assets/images/KALAN-removebg-preview.png', height: 14),
             ],
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: isOnline ? const Color(0xFFF0FDF4) : const Color(0xFFFFF7ED),
+              color: isOnline ? const Color(0xFFEAF3DE) : const Color(0xFFF5F2EA),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: isOnline ? const Color(0xFFDCFCE7) : const Color(0xFFFFEDD5)),
+              border: Border.all(color: isOnline ? const Color(0xFF4CAF50).withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
                 Container(
                   width: 8, height: 8,
                   decoration: BoxDecoration(
-                    color: isOnline ? const Color(0xFF22C55E) : const Color(0xFFF97316),
+                    color: isOnline ? const Color(0xFF4CAF50) : Colors.grey,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -140,9 +128,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Text(
                   isOnline ? 'En ligne' : 'Hors ligne',
                   style: TextStyle(
-                    color: isOnline ? const Color(0xFF166534) : const Color(0xFFC2410C),
+                    color: isOnline ? const Color(0xFF2D6A2D) : Colors.grey,
                     fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ],
@@ -153,215 +141,456 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildLogoSvg() {
-    return SizedBox(
-      width: 28, height: 28,
-      child: SvgPicture.string(
-        '''
-        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-          <path d="M50 10 L80 50 L50 90 L20 50 Z" fill="#2E7D32" />
-          <path d="M50 10 L65 50 L50 90 L35 50 Z" fill="#4CAF50" />
-          <path d="M45 50 L55 50 L50 85 Z" fill="#5C3D1A" />
-          <path d="M40 70 L60 70 L60 85 L40 85 Z" fill="#FBC02D" />
-          <path d="M50 30 L60 50 L50 45 L40 50 Z" fill="#FBC02D" />
-        </svg>
-        ''',
-      ),
-    );
-  }
-
-  Widget _buildIdentity(BuildContext context, Map<String, dynamic> profile, LevelInfo levelInfo, int points) {
+  Widget _buildIdentity(BuildContext context, Map<String, dynamic> profile) {
     return Column(
       children: [
         const SizedBox(height: 20),
         Stack(
           children: [
             Container(
-              width: 110, height: 110,
+              width: 100, height: 100,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0xFFE8D5A3), Color(0xFFC8956C)],
-                ),
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 4),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4))],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 15, offset: const Offset(0, 5))],
               ),
               child: ClipOval(child: _buildAvatarImage(profile)),
             ),
             Positioned(
-              bottom: 4, right: 4,
+              bottom: 0, right: 0,
               child: GestureDetector(
                 onTap: () => _showAvatarPicker(context),
                 child: Container(
-                  width: 30, height: 30,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2E7D32),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2.5),
-                  ),
-                  child: const Icon(Icons.edit, color: Colors.white, size: 16),
+                  width: 32, height: 32,
+                  decoration: const BoxDecoration(color: Color(0xFF4CAF50), shape: BoxShape.circle),
+                  child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 16),
                 ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              profile['pseudo'] ?? 'Élève KALAN',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF111111)),
-            ),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: () => _showEditProfileBottomSheet(context, profile),
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF0F7F0),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.edit, size: 14, color: Color(0xFF2E7D32)),
               ),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF0F7F0),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFC8E6C9)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TreeEvolution(stage: levelInfo.level, size: 24),
-              const SizedBox(width: 6),
-              Text('NIVEAU ${levelInfo.level}', style: const TextStyle(color: Color(0xFF2E7D32), fontSize: 11, fontWeight: FontWeight.w800)),
-              const SizedBox(width: 10),
-              Stack(
-                children: [
-                  Container(width: 120, height: 7, decoration: BoxDecoration(color: const Color(0xFFC8E6C9), borderRadius: BorderRadius.circular(6))),
-                  Container(
-                    width: 120 * (points / levelInfo.nextLevelPoints).clamp(0.0, 1.0),
-                    height: 7, decoration: BoxDecoration(color: const Color(0xFF2E7D32), borderRadius: BorderRadius.circular(6)),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 10),
-              Text('$points / ${levelInfo.nextLevelPoints} XP', style: const TextStyle(color: Color(0xFF4CAF50), fontSize: 10, fontWeight: FontWeight.w700)),
-            ],
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              profile['pseudo'] ?? 'Élève KALAN',
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF1A1A1A)),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () => _showEditProfileBottomSheet(context, profile),
+              child: const Icon(Icons.edit_rounded, size: 18, color: Color(0xFF4CAF50)),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildAvatarImage(Map<String, dynamic> profile) {
-    final avatarUrl = profile['avatar_url']?.toString();
-    final avatarId = profile['avatar_id'];
-    if (avatarUrl != null && avatarUrl.startsWith('http')) return Image.network(avatarUrl, fit: BoxFit.cover);
-    if (avatarId != null) return Image.asset('assets/avatars/avatar$avatarId.png', fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildDefaultSvgAvatar());
-    return _buildDefaultSvgAvatar();
-  }
-
-  Widget _buildDefaultSvgAvatar() {
-    return SvgPicture.string(
-      '''
-      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="50" cy="50" r="50" fill="#C07840" /><path d="M20 30 Q50 10 80 30 L80 40 Q50 20 20 40 Z" fill="#1A4D2E" /><circle cx="20" cy="50" r="5" fill="#FBC02D" /><circle cx="80" cy="50" r="5" fill="#FBC02D" /><path d="M30 70 Q50 90 70 70" fill="none" stroke="white" stroke-width="3" /><path d="M20 80 L80 80 L80 100 L20 100 Z" fill="#2E7D32" />
-      </svg>
-      ''',
-      fit: BoxFit.cover,
-    );
-  }
-
-  Widget _buildStatsGrid(Map<String, dynamic> stats, Map<String, dynamic> profile) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 20, 18, 0),
-      child: GridView.count(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        crossAxisCount: 3,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 1.1,
-        children: [
-          _buildStatCardVertical('Fiches', (stats['deckCount'] ?? 0).toString(), const Color(0xFF7C3AED), Icons.description_outlined),
-          _buildStatCardVertical('Quiz', (stats['quizCount'] ?? 0).toString(), const Color(0xFFEA580C), Icons.help_outline_outlined),
-          _buildStatCardVertical('Série', '${profile['streak'] ?? 0}j', const Color(0xFFF97316), Icons.local_fire_department),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatCardVertical(String label, String value, Color color, IconData icon) {
+  Widget _buildTabBar() {
     return Container(
-      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      height: 48,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF0EBE0)),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.01), blurRadius: 4, offset: const Offset(0, 2))],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 28, height: 28,
-            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(8)),
-            child: Icon(icon, color: Colors.white, size: 14),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          const SizedBox(height: 8),
-          Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFF111111), height: 1.1)),
-          const SizedBox(height: 2),
-          Text(label, style: const TextStyle(fontSize: 9, color: Color(0xFF9CA3AF), fontWeight: FontWeight.w600)),
+        ],
+      ),
+      child: TabBar(
+        controller: _tabController,
+        dividerColor: Colors.transparent,
+        indicator: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
+        ),
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicatorPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        labelColor: const Color(0xFF2D6A2D),
+        unselectedLabelColor: Colors.grey.shade500,
+        labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 0.5),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+        tabs: const [
+          Tab(text: 'PROFIL'),
+          Tab(text: 'PROGRESSION'),
+          Tab(text: 'AMIS'),
         ],
       ),
     );
   }
 
-  Widget _buildBadgesSection(BuildContext context, List<Map<String, dynamic>> userBadges) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+  Widget _buildProfileTab(BuildContext context, Map<String, dynamic> profile, Map<String, dynamic> stats, List<Map<String, dynamic>> badges, LevelInfo levelInfo, int points) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      physics: const BouncingScrollPhysics(),
+      children: [
+        Row(
+          children: [
+            Expanded(child: _buildStatBlock('NIVEAU', levelInfo.level.toString(), const Color(0xFF4CAF50), Icons.trending_up_rounded)),
+            const SizedBox(width: 15),
+            Expanded(child: _buildStatBlock('XP TOTAL', points.toString(), const Color(0xFFE8C87A), Icons.auto_awesome_rounded)),
+          ],
+        ),
+        const SizedBox(height: 20),
+        _buildRoadmapBanner(context, levelInfo),
+        const SizedBox(height: 20),
+        _buildBadgesSection(context, badges),
+        _buildSettingsSection(context),
+        _buildLogoutButton(context),
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+
+  Widget _buildStatBlock(String label, String value, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 12),
+          Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF1A1A1A))),
+          Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.grey.shade400, letterSpacing: 1)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoadmapBanner(BuildContext context, LevelInfo levelInfo) {
+    String worldImg;
+    switch (levelInfo.level) {
+      case 1: worldImg = 'level-1-graine.jpg'; break;
+      case 2: worldImg = 'level-2-baobab.jpg'; break;
+      case 3: worldImg = 'level-3-feu.jpg'; break;
+      case 4: worldImg = 'level-4-griot.jpg'; break;
+      case 5: worldImg = 'level-5-masque.jpg'; break;
+      case 6: worldImg = 'level-6-ancetre.jpg'; break;
+      default: worldImg = 'level-1-graine.jpg';
+    }
+    
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RoadmapScreen())),
+      child: Container(
+        width: double.infinity,
+        height: 110,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          image: DecorationImage(
+            image: AssetImage('assets/roadmap/$worldImg'),
+            fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(Colors.black.withValues(alpha: 0.35), BlendMode.darken),
+          ),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Badges débloqués', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Color(0xFF111111))),
-              GestureDetector(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BadgesScreen())),
-                child: const Text('Voir tout', style: TextStyle(color: Color(0xFF2E7D32), fontSize: 13, fontWeight: FontWeight.w700)),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('MON PARCOURS', style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                  const SizedBox(height: 2),
+                  Text('Actuel : ${levelInfo.title}', style: GoogleFonts.plusJakartaSans(color: Colors.white.withValues(alpha: 0.9), fontSize: 12, fontWeight: FontWeight.w700)),
+                ],
+              ),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
+                child: const Icon(Icons.chevron_right_rounded, color: Colors.white, size: 28),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          if (userBadges.isEmpty)
-            _buildEmptyState('Aucun badge pour le moment', Icons.emoji_events_outlined)
-          else
-            FutureBuilder<List<Map<String, dynamic>>>(
-              future: DatabaseHelper.instance.getAllBadges(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) return const SizedBox(height: 80);
-                final allBadges = snapshot.data!;
-                final unlockedKeys = userBadges.map((b) => b['badge_key']).toSet();
-                final earnedBadges = allBadges.where((b) => unlockedKeys.contains(b['id'])).toList();
-                return Row(
-                  children: earnedBadges.take(4).map((b) => Padding(
-                    padding: const EdgeInsets.only(right: 15),
-                    child: Column(
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProgressionTab(Map<String, dynamic> profile, Map<String, dynamic> stats) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      physics: const BouncingScrollPhysics(),
+      children: [
+        _buildProgressionCard(
+          'Série de révision', 
+          '${profile['streak'] ?? 0} jours', 
+          const Color(0xFFE24B4A), 
+          Icons.whatshot_rounded,
+          'Continue comme ça ! 🔥'
+        ),
+        const SizedBox(height: 15),
+        Row(
+          children: [
+            Expanded(child: _buildProgressionSmallCard('Quiz faits', (stats['quizCount'] ?? 0).toString(), Colors.blue)),
+            const SizedBox(width: 15),
+            Expanded(child: _buildProgressionSmallCard('Cartes créées', (stats['deckCount'] ?? 0).toString(), Colors.purple)),
+          ],
+        ),
+        const SizedBox(height: 15),
+        _buildProgressionCard(
+          'Taux de réussite', 
+          '${stats['avgScore'] ?? 0}%', 
+          const Color(0xFF4CAF50), 
+          Icons.auto_graph_rounded,
+          'Précision moyenne sur tes quiz'
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProgressionCard(String title, String value, Color color, IconData icon, String subtitle) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(28)),
+      child: Row(
+        children: [
+          Container(
+            width: 56, height: 56,
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.grey.shade500)),
+                Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF1A1A1A))),
+                Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressionSmallCard(String title, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.grey.shade500)),
+          const SizedBox(height: 8),
+          Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: color)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFriendsTab(UserLoaded state) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      physics: const BouncingScrollPhysics(),
+      children: [
+        // Barre de recherche
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  textInputAction: TextInputAction.search,
+                  onChanged: (val) {
+                    setState(() {}); // Force le rebuild pour cacher "Résultats" si vide
+                    context.read<UserBloc>().add(SearchFriends(val.trim()));
+                  },
+                  decoration: const InputDecoration(                    hintText: 'Rechercher un pseudo...',
+                    prefixIcon: Icon(Icons.search_rounded, color: Colors.grey),
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: ElevatedButton(
+                  onPressed: () {
+                    final val = _searchController.text.trim();
+                    if (val.isNotEmpty) {
+                      context.read<UserBloc>().add(SearchFriends(val));
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2D6A2D),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Icon(Icons.send_rounded, size: 20),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        
+        // Résultats de recherche - On ne les affiche que si la barre n'est pas vide ET qu'il y a des résultats
+        if (_searchController.text.trim().isNotEmpty && state.searchResults.isNotEmpty) ...[
+          const Text('RÉSULTATS DE RECHERCHE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.grey, letterSpacing: 1)),
+          const SizedBox(height: 12),
+          ...state.searchResults.map((user) => Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.black.withValues(alpha: 0.03)),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 25,
+                  backgroundColor: const Color(0xFF4CAF50).withValues(alpha: 0.1),
+                  backgroundImage: user['avatar_id'] != null 
+                    ? AssetImage('assets/avatars/avatar${user['avatar_id']}.png')
+                    : null,
+                ),
+                const SizedBox(width: 15),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(user['pseudo'] ?? 'Utilisateur', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Color(0xFF1A1A1A))),
+                      const Text('Disponible pour réviser', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    context.read<UserBloc>().add(AddFriend(user));
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${user['pseudo']} ajouté !'), backgroundColor: const Color(0xFF2D6A2D)));
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFEAF3DE),
+                    foregroundColor: const Color(0xFF2D6A2D),
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('Ajouter', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          )),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Divider(color: Color(0xFFE0D8CC), thickness: 1),
+          ),
+        ],
+
+        const Text('TES AMIS ACTUELS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.grey, letterSpacing: 1)),
+        const SizedBox(height: 16),
+        
+        if (state.friends.isEmpty)
+          _buildEmptyState('Invite tes amis pour comparer vos scores !', Icons.people_outline_rounded)
+        else
+          ...state.friends.map((friend) => Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4))],
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundImage: friend['friend_avatar_id'] != null 
+                    ? AssetImage('assets/avatars/avatar${friend['friend_avatar_id']}.png')
+                    : null,
+                ),
+                const SizedBox(width: 15),
+                Expanded(
+                  child: Text(friend['friend_pseudo'], style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Color(0xFF1A1A1A))),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(color: const Color(0xFFEAF3DE), borderRadius: BorderRadius.circular(8)),
+                  child: const Text('Niveau 1', style: TextStyle(color: Color(0xFF2D6A2D), fontSize: 10, fontWeight: FontWeight.w900)),
+                ),
+                const SizedBox(width: 10),
+                const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+              ],
+            ),
+          )),
+        const SizedBox(height: 100),
+      ],
+    );
+  }
+
+  Widget _buildAvatarImage(Map<String, dynamic> profile) {
+    final avatarId = profile['avatar_id'];
+    if (avatarId != null) return Image.asset('assets/avatars/avatar$avatarId.png', fit: BoxFit.cover);
+    return Image.asset('assets/avatars/avatar1.png', fit: BoxFit.cover);
+  }
+
+  Widget _buildBadgesSection(BuildContext context, List<Map<String, dynamic>> userBadges) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('BADGES', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.grey, letterSpacing: 1)),
+            GestureDetector(
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BadgesScreen())),
+              child: const Text('VOIR TOUT', style: TextStyle(color: Color(0xFF4CAF50), fontSize: 11, fontWeight: FontWeight.w900)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        if (userBadges.isEmpty)
+          _buildEmptyState('Aucun badge pour le moment', Icons.emoji_events_outlined)
+        else
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: DatabaseHelper.instance.getAllBadges(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) return const SizedBox(height: 80);
+              final allBadges = snapshot.data!;
+              final unlockedKeys = userBadges.map((b) => b['badge_key']).toSet();
+              final earnedBadges = allBadges.where((b) => unlockedKeys.contains(b['id'])).toList();
+
+              return SizedBox(
+                height: 90,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: earnedBadges.length.clamp(0, 6),
+                  separatorBuilder: (_, __) => const SizedBox(width: 15),
+                  itemBuilder: (context, index) {
+                    final b = earnedBadges[index];
+                    final color = Color(b['color']);
+                    return Column(
                       children: [
                         Container(
                           width: 64, height: 64,
                           decoration: BoxDecoration(
-                            color: Color(b['color']).withValues(alpha: 0.15), shape: BoxShape.circle,
-                            border: Border.all(color: Color(b['color']), width: 2),
+                            color: color.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: color, width: 2),
                           ),
                           alignment: Alignment.center,
                           child: ClipOval(
@@ -369,105 +598,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ? Image.asset(
                                     'assets/badges/${b['image_path']}',
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Text(b['emoji'] ?? '🏆', style: const TextStyle(fontSize: 26)),
+                                    errorBuilder: (_, __, ___) => Text(b['emoji'] ?? '🏆', style: const TextStyle(fontSize: 24)),
                                   )
-                                : Text(b['emoji'] ?? '🏆', style: const TextStyle(fontSize: 26)),
+                                : Text(b['emoji'] ?? '🏆', style: const TextStyle(fontSize: 24)),
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(b['label'], style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF555555))),
+                        Text(
+                          b['label'],
+                          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF555555)),
+                        ),
                       ],
-                    ),
-                  )).toList(),
-                );
-              }
-            ),
-        ],
-      ),
-    );
-  }
-
-  void _showEditProfileBottomSheet(BuildContext context, Map<String, dynamic> profile) {
-    final pseudoController = TextEditingController(text: profile['pseudo']);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 24, right: 24, top: 24),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Modifier mes infos', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF111111))),
-                const SizedBox(height: 24),
-                _buildTextField('Pseudo', pseudoController, Icons.alternate_email),
-                const SizedBox(height: 32),
-                InkWell(
-                  onTap: () {
-                    if (pseudoController.text.trim().isEmpty || pseudoController.text.trim().length < 3) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Pseudo obligatoire (min 3 caractères)'), backgroundColor: Colors.red),
-                      );
-                      return;
-                    }
-
-                    // Dispatch Bloc Event
-                    context.read<UserBloc>().add(UpdateUserProfile(
-                      pseudo: pseudoController.text.trim(),
-                    ));
-
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Infos sauvegardées ✓'),
-                        backgroundColor: Color(0xFF2E7D32),
-                        duration: Duration(seconds: 2),
-                      ),
                     );
                   },
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2E7D32),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Center(
-                      child: Text('Sauvegarder', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
                 ),
-                const SizedBox(height: 40),
-              ],
-            ),
+              );
+            },
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField(String label, TextEditingController controller, IconData icon) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF9CA3AF))),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            prefixIcon: Icon(icon, size: 20, color: const Color(0xFF2E7D32)),
-            hintText: 'Entrez votre $label',
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFF0EBE0))),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFF0EBE0))),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-        ),
       ],
     );
   }
@@ -477,14 +624,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 24),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 18),
-          child: Text('Paramètres', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Color(0xFF111111))),
-        ),
+        const Text('PARAMÈTRES', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.grey, letterSpacing: 1)),
         const SizedBox(height: 12),
         Container(
-          margin: const EdgeInsets.symmetric(horizontal: 18),
-          decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0xFFF0EBE0)))),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4))],
+          ),
           child: Column(
             children: [
               const _SettingItem(
@@ -538,13 +686,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _selectReminderTime(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     final timeParts = _reminderTime.split(':');
-    final initialTime = TimeOfDay(
-      hour: int.parse(timeParts[0]),
-      minute: int.parse(timeParts[1]),
-    );
+    final initialTime = TimeOfDay(hour: int.parse(timeParts[0]), minute: int.parse(timeParts[1]));
     
-    if (!context.mounted) return;
-
+    if (!mounted) return;
     final selectedTime = await showTimePicker(
       context: context,
       initialTime: initialTime,
@@ -552,9 +696,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF2E7D32),
+              primary: Color(0xFF2D6A2D),
               onPrimary: Colors.white,
-              onSurface: Color(0xFF111111),
+              onSurface: Color(0xFF1A1A1A),
             ),
           ),
           child: child!,
@@ -565,38 +709,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (selectedTime != null) {
       final formattedTime = '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
       await prefs.setString('reminder_time', formattedTime);
-      setState(() {
-        _reminderTime = formattedTime;
-      });
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Rappel programmé à $formattedTime ✓'),
-            backgroundColor: const Color(0xFF2E7D32),
-          ),
-        );
-      }
+      setState(() => _reminderTime = formattedTime);
     }
   }
 
   Widget _buildEmptyState(String text, IconData icon) {
     return Container(
-      width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 20),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE0D8CC))),
-      child: Column(children: [Icon(icon, color: Colors.grey.shade400, size: 32), const SizedBox(height: 8), Text(text, style: const TextStyle(color: Color(0xFF555555), fontSize: 12, fontWeight: FontWeight.w500))]),
+      width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 30),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(24), border: Border.all(color: Colors.black.withValues(alpha: 0.05))),
+      child: Column(children: [Icon(icon, color: Colors.grey.shade400, size: 40), const SizedBox(height: 12), Text(text, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF555555), fontSize: 13, fontWeight: FontWeight.w600))]),
     );
   }
 
   Widget _buildLogoutButton(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 24, 18, 8),
+      padding: const EdgeInsets.only(top: 24),
       child: InkWell(
         onTap: () => _showLogoutDialog(context),
-        borderRadius: BorderRadius.circular(18),
         child: Container(
-          width: double.infinity, padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFFEE2E2), width: 1.5)),
-          child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.logout, color: Color(0xFFB91C1C), size: 18), SizedBox(width: 8), Text('Déconnexion', style: TextStyle(color: Color(0xFFB91C1C), fontSize: 14, fontWeight: FontWeight.w800))]),
+          width: double.infinity, padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(18)),
+          child: const Center(child: Text('DÉCONNEXION', style: TextStyle(color: Color(0xFFB91C1C), fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1))),
         ),
       ),
     );
@@ -606,14 +739,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Déconnexion', style: TextStyle(fontWeight: FontWeight.w800)),
-        content: const Text('Es-tu sûr de vouloir te déconnecter ?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Déconnexion', style: TextStyle(fontWeight: FontWeight.w900)),
+        content: const Text('Veux-tu vraiment quitter KALAN ?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler', style: TextStyle(color: Colors.grey))),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('NON', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w900))),
           TextButton(onPressed: () async {
             await SupabaseService.client.auth.signOut();
             if (context.mounted) Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (route) => false);
-          }, child: const Text('Déconnecter', style: TextStyle(color: Color(0xFFB91C1C), fontWeight: FontWeight.bold))),
+          }, child: const Text('OUI, QUITTER', style: TextStyle(color: Color(0xFFB91C1C), fontWeight: FontWeight.w900))),
         ],
       ),
     );
@@ -622,28 +756,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _showAvatarPicker(BuildContext context) {
     showModalBottomSheet(
       context: context, backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
       builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Choisir un avatar', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text('Choisir un avatar', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
             const SizedBox(height: 20),
+            GridView.builder(
+              shrinkWrap: true,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, crossAxisSpacing: 15, mainAxisSpacing: 15),
+              itemCount: 8,
+              itemBuilder: (context, index) {
+                final id = index + 1;
+                return GestureDetector(
+                  onTap: () { context.read<UserBloc>().add(UpdateUserProfile(avatarId: id)); Navigator.pop(context); },
+                  child: ClipOval(child: Image.asset('assets/avatars/avatar$id.png', fit: BoxFit.cover)),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditProfileBottomSheet(BuildContext context, Map<String, dynamic> profile) {
+    final pseudoController = TextEditingController(text: profile['pseudo']);
+    showModalBottomSheet(
+      context: context, isScrollControlled: true, backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 24, right: 24, top: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Modifier le pseudo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 20),
+            TextField(
+              controller: pseudoController,
+              decoration: InputDecoration(filled: true, fillColor: const Color(0xFFF5F2EA), border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none)),
+            ),
+            const SizedBox(height: 24),
             SizedBox(
-              height: 200,
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, crossAxisSpacing: 10, mainAxisSpacing: 10),
-                itemCount: 12,
-                itemBuilder: (context, index) {
-                  final id = index + 1;
-                  return GestureDetector(
-                    onTap: () { context.read<UserBloc>().add(UpdateUserProfile(avatarId: id)); Navigator.pop(context); },
-                    child: Container(decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.grey.shade200)), child: ClipOval(child: Image.asset('assets/avatars/avatar$id.png', fit: BoxFit.cover))),
-                  );
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4CAF50), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                onPressed: () {
+                  context.read<UserBloc>().add(UpdateUserProfile(pseudo: pseudoController.text.trim()));
+                  Navigator.pop(context);
                 },
+                child: const Text('ENREGISTRER', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
               ),
             ),
+            const SizedBox(height: 40),
           ],
         ),
       ),
@@ -666,8 +835,8 @@ class _SettingItem extends StatefulWidget {
     required this.iconBg,
     required this.title,
     required this.subtitle,
-    required this.prefKey,
-    required this.defaultValue,
+    this.prefKey = '',
+    this.defaultValue = true,
     this.isAction = false,
     this.onTap,
   });
@@ -682,7 +851,7 @@ class _SettingItemState extends State<_SettingItem> {
   @override
   void initState() {
     super.initState();
-    _loadPref();
+    if (!widget.isAction) _loadPref();
   }
 
   Future<void> _loadPref() async {
@@ -702,53 +871,21 @@ class _SettingItemState extends State<_SettingItem> {
               setState(() => _value = newValue);
             },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFF0EBE0)))),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
         child: Row(
           children: [
-            Container(width: 38, height: 38, decoration: BoxDecoration(color: widget.iconBg, shape: BoxShape.circle), child: Icon(widget.icon, size: 18, color: const Color(0xFF111111))),
+            Container(width: 38, height: 38, decoration: BoxDecoration(color: widget.iconBg, shape: BoxShape.circle), child: Icon(widget.icon, size: 18, color: const Color(0xFF1A1A1A))),
             const SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(widget.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF111111))), const SizedBox(height: 1), Text(widget.subtitle, style: const TextStyle(fontSize: 10, color: Color(0xFF9CA3AF)))])),
-            if (widget.isAction) const Icon(Icons.chevron_right, size: 20, color: Color(0xFFD1D5DB))
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(widget.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A))), const SizedBox(height: 1), Text(widget.subtitle, style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w600))])),
+            if (widget.isAction) const Icon(Icons.chevron_right_rounded, size: 20, color: Colors.grey)
             else AnimatedContainer(
-              duration: const Duration(milliseconds: 200), width: 48, height: 28,
-              decoration: BoxDecoration(color: _value ? const Color(0xFF2E7D32) : const Color(0xFFD1D5DB), borderRadius: BorderRadius.circular(14)),
-              child: Stack(children: [AnimatedPositioned(duration: const Duration(milliseconds: 200), curve: Curves.easeIn, left: _value ? 23 : 3, top: 3, child: Container(width: 22, height: 22, decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 4, offset: const Offset(0, 1))])))]),
+              duration: const Duration(milliseconds: 200), width: 44, height: 24,
+              decoration: BoxDecoration(color: _value ? const Color(0xFF2D6A2D) : const Color(0xFFD1D5DB), borderRadius: BorderRadius.circular(14)),
+              child: Stack(children: [AnimatedPositioned(duration: const Duration(milliseconds: 200), curve: Curves.easeIn, left: _value ? 22 : 2, top: 2, child: Container(width: 20, height: 20, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(0, 1))])))]),
             ),
           ],
         ),
       ),
     );
   }
-}
-
-class FlutterWatermarkPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = const Color(0xFF2E7D32)..style = PaintingStyle.fill;
-    final double w = size.width;
-    final double h = size.height;
-
-    void drawLogo(double x, double y, double scale) {
-      final path = Path();
-      path.moveTo(x + 40 * scale, y + 0 * scale);
-      path.lineTo(x + 100 * scale, y + 60 * scale);
-      path.lineTo(x + 70 * scale, y + 90 * scale);
-      path.lineTo(x + 10 * scale, y + 30 * scale);
-      path.close();
-
-      path.moveTo(x + 70 * scale, y + 30 * scale);
-      path.lineTo(x + 100 * scale, y + 60 * scale);
-      path.lineTo(x + 70 * scale, y + 90 * scale);
-      path.lineTo(x + 40 * scale, y + 60 * scale);
-      path.close();
-      canvas.drawPath(path, paint);
-    }
-
-    drawLogo(w * 0.1, h * 0.2, 0.8);
-    drawLogo(w * 0.6, h * 0.5, 1.2);
-    drawLogo(w * 0.2, h * 0.8, 0.6);
-  }
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

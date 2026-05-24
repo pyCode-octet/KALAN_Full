@@ -216,6 +216,18 @@ class DatabaseHelper {
       )
     ''');
 
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS friends (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        friend_uuid TEXT NOT NULL,
+        friend_pseudo TEXT NOT NULL,
+        friend_avatar_id INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, friend_uuid)
+      )
+    ''');
+
     // Seed default data
     await _seedDefaultData(db);
   }
@@ -597,6 +609,21 @@ class DatabaseHelper {
     );
   }
 
+  Future<void> addFriend(String userId, Map<String, dynamic> friendData) async {
+    final db = await instance.database;
+    await db.insert('friends', {
+      'user_id': userId,
+      'friend_uuid': friendData['uuid'],
+      'friend_pseudo': friendData['pseudo'],
+      'friend_avatar_id': friendData['avatar_id'],
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<List<Map<String, dynamic>>> getFriends(String userId) async {
+    final db = await instance.database;
+    return await db.query('friends', where: 'user_id = ?', whereArgs: [userId]);
+  }
+
   Future<void> unlockBadge(String userId, String badgeKey) async {
     final db = await database;
     
@@ -681,7 +708,7 @@ class DatabaseHelper {
     final existing = await db.query('user_badges', where: 'user_id = ?', whereArgs: [userId]);
     final unlockedKeys = existing.map((e) => e['badge_key'] as String).toSet();
 
-    // Badge "explorateur" : avoir étudié 10 fiches (10 decks créés)
+    // Badge "explorateur" : avoir créé 10 decks
     if (!unlockedKeys.contains('explorateur')) {
       final deckCount = Sqflite.firstIntValue(
         await db.rawQuery('SELECT COUNT(*) FROM decks WHERE user_id = ?', [userId])
@@ -692,10 +719,10 @@ class DatabaseHelper {
       }
     }
 
-    // Badge "plume" : avoir créé 5 fiches
+    // Badge "plume" : avoir créé 5 fiches en Littérature
     if (!unlockedKeys.contains('plume')) {
       final deckCount = Sqflite.firstIntValue(
-        await db.rawQuery('SELECT COUNT(*) FROM decks WHERE user_id = ?', [userId])
+        await db.rawQuery("SELECT COUNT(*) FROM decks WHERE user_id = ? AND subject = 'Littérature'", [userId])
       ) ?? 0;
       if (deckCount >= 5) {
         await unlockBadge(userId, 'plume');
@@ -725,19 +752,31 @@ class DatabaseHelper {
       }
     }
 
-    // Badge "philosophe" : avoir fait 5 quiz avec un score moyen >= 80%
+    // Badge "philosophe" : avoir fait 3 quiz avec un score moyen >= 80% en Humanités
     if (!unlockedKeys.contains('philosophe')) {
       final quizCount = Sqflite.firstIntValue(
-        await db.rawQuery('SELECT COUNT(*) FROM quiz_results WHERE user_id = ?', [userId])
+        await db.rawQuery("SELECT COUNT(*) FROM quiz_results qr JOIN decks d ON qr.deck_id = d.uuid WHERE qr.user_id = ? AND d.subject = 'Humanités'", [userId])
       ) ?? 0;
-      if (quizCount >= 5) {
+      if (quizCount >= 3) {
         final avgResult = await db.rawQuery(
-          'SELECT AVG(CAST(score AS FLOAT) / total) as avg FROM quiz_results WHERE user_id = ?', [userId]
+          "SELECT AVG(CAST(qr.score AS FLOAT) / qr.total) as avg FROM quiz_results qr JOIN decks d ON qr.deck_id = d.uuid WHERE qr.user_id = ? AND d.subject = 'Humanités'", [userId]
         );
         final avg = (avgResult.first['avg'] as double?) ?? 0.0;
         if (avg >= 0.8) {
           await unlockBadge(userId, 'philosophe');
           newlyUnlocked.add('philosophe');
+        }
+      }
+    }
+
+    // Badge "pousse" : Atteindre le Niveau 2 (Baobab)
+    if (!unlockedKeys.contains('pousse')) {
+      final userMaps = await db.query('users', columns: ['points'], where: 'uuid = ?', whereArgs: [userId]);
+      if (userMaps.isNotEmpty) {
+        final points = userMaps.first['points'] as int? ?? 0;
+        if (points >= 100) { // 100 points = Début Niveau 2
+          await unlockBadge(userId, 'pousse');
+          newlyUnlocked.add('pousse');
         }
       }
     }

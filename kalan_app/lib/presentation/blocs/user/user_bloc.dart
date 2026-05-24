@@ -59,5 +59,36 @@ class UserBloc extends Bloc<UserEvent, UserState> {
         emit(UserError(e.toString()));
       }
     });
+
+    on<SearchFriends>((event, emit) async {
+      if (state is UserLoaded) {
+        final currentState = state as UserLoaded;
+        if (event.query.trim().isEmpty) {
+          emit(currentState.copyWith(searchResults: []));
+          return;
+        }
+        try {
+          final results = await _repository.searchUsers(event.query);
+          emit(currentState.copyWith(searchResults: results));
+        } catch (_) {}
+      }
+    });
+
+    on<AddFriend>((event, emit) async {
+      try {
+        await _repository.addFriend(event.friend);
+        add(LoadFriends());
+      } catch (_) {}
+    });
+
+    on<LoadFriends>((event, emit) async {
+      if (state is UserLoaded) {
+        final currentState = state as UserLoaded;
+        try {
+          final friends = await _repository.getFriends();
+          emit(currentState.copyWith(friends: friends));
+        } catch (_) {}
+      }
+    });
   }
 }

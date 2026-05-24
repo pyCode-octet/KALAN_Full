@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../core/constants/app_colors.dart';
 
 class FlashcardView extends StatelessWidget {
   final String text;
@@ -22,10 +21,10 @@ class FlashcardView extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.black.withOpacity(0.06), width: 0.5),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.06), width: 0.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 20,
             offset: const Offset(0, 8),
           )
@@ -70,10 +69,9 @@ class FlashcardView extends StatelessWidget {
             Container(
               width: double.infinity,
               height: 0.5,
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
             ),
             const SizedBox(height: 24),
-            // Example of styled math or code block if needed could go here
           ],
           
           if (hint != null && !isAnswer) ...[

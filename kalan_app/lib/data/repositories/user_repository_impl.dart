@@ -343,6 +343,50 @@ class UserRepositoryImpl implements UserRepository {
     return await _dbHelper.getUserBadges(userId);
   }
 
+  @override
+  Future<List<Map<String, dynamic>>> searchUsers(String pseudo) async {
+    if (pseudo.trim().isEmpty) return [];
+    if (!await _connectivity.isOnline()) return [];
+    
+    try {
+      final List<dynamic> response = await SupabaseService.client
+          .from('users')
+          .select('uuid, pseudo, avatar_id, avatar_url')
+          .ilike('pseudo', '%$pseudo%')
+          .limit(10);
+      
+      return response.map((u) => Map<String, dynamic>.from(u)).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  @override
+  Future<void> addFriend(Map<String, dynamic> friendData) async {
+    final prefs = await SharedPreferences.getInstance();
+    final String currentUserId = prefs.getString('current_user_uuid') ?? 'guest';
+    
+    // Save locally
+    await _dbHelper.addFriend(currentUserId, friendData);
+    
+    // Sync online if possible
+    if (await _connectivity.isOnline() && currentUserId != 'guest') {
+      try {
+        await SupabaseService.client.from('friends').upsert({
+          'user_id': currentUserId,
+          'friend_uuid': friendData['uuid'],
+        });
+      } catch (_) {}
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getFriends() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String currentUserId = prefs.getString('current_user_uuid') ?? 'guest';
+    return await _dbHelper.getFriends(currentUserId);
+  }
+
   Future<void> _addToSyncQueue(String action, Map<String, dynamic> payload) async {
     final db = await _dbHelper.database;
     await db.insert('sync_queue', {

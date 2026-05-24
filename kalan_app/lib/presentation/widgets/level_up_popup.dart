@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/celebration_coordinator.dart';
 import 'tree_evolution.dart';
 import 'confetti_widget.dart';
 
@@ -13,7 +14,7 @@ class LevelUpPopup {
   }) {
     showGeneralDialog(
       context: context,
-      barrierDismissible: true,
+      barrierDismissible: false, // Forcer l'interaction
       barrierLabel: 'level_up_popup',
       barrierColor: Colors.black87,
       transitionDuration: const Duration(milliseconds: 600),
@@ -185,7 +186,10 @@ class _LevelUpContent extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    CelebrationCoordinator.dismiss();
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2D6A2D),
                     foregroundColor: Colors.white,
@@ -234,4 +238,3 @@ class _LevelUpContent extends StatelessWidget {
     );
   }
 }
-

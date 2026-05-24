@@ -31,21 +31,15 @@ class ZoneBanner extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TreeEvolution(stage: int.parse(levelSubtitle.split(' ').last), size: 16),
-          const SizedBox(width: 8),
-          Text(
-            '$levelSubtitle : $title',
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.w900,
-              fontSize: 11,
-              letterSpacing: 0.8,
-            ),
-          ),
-        ],
+      child: Text(
+        '$levelSubtitle : $title',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w900,
+          fontSize: 11,
+          letterSpacing: 0.8,
+        ),
       ),
     );
   }

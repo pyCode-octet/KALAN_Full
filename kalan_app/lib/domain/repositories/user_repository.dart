@@ -5,4 +5,9 @@ abstract class UserRepository {
   Future<List<Map<String, dynamic>>> getUserBadges(String userId);
   Future<List<Map<String, dynamic>>> getRecentActivity(String userId);
   Future<void> addPoints(int points);
+  
+  // Friend Management
+  Future<List<Map<String, dynamic>>> searchUsers(String pseudo);
+  Future<void> addFriend(Map<String, dynamic> friendData);
+  Future<List<Map<String, dynamic>>> getFriends();
 }

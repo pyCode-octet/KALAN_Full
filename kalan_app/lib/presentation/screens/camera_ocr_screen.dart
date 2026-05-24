@@ -232,9 +232,10 @@ class _CameraOCRScreenState extends State<CameraOCRScreen> {
                         if (_isPickingImage) return;
                         setState(() => _isPickingImage = true);
                         try {
-                          final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-                          if (image != null) {
-                            setState(() => _capturedImages.add(image));
+                          // pickMultiImage permet souvent d'accéder à plus d'albums et de choisir plusieurs fichiers d'un coup
+                          final List<XFile> images = await _picker.pickMultiImage();
+                          if (images.isNotEmpty) {
+                            setState(() => _capturedImages.addAll(images));
                           }
                         } finally {
                           if (mounted) {

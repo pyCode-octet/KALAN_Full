@@ -86,7 +86,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
             borderRadius: BorderRadius.circular(32),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -324,7 +324,7 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 20,
             offset: const Offset(0, 8),
           )
@@ -464,10 +464,10 @@ class _FlashcardStudyScreenState extends State<FlashcardStudyScreen> {
             decoration: BoxDecoration(
               color: isPrimary ? color : Colors.white,
               shape: BoxShape.circle,
-              border: isPrimary ? null : Border.all(color: Colors.black.withOpacity(0.1), width: 0.5),
+              border: isPrimary ? null : Border.all(color: Colors.black.withValues(alpha: 0.1), width: 0.5),
               boxShadow: [
                 BoxShadow(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 )

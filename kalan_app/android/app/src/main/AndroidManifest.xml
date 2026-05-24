@@ -3,6 +3,11 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     
+    <!-- Permissions pour accéder aux photos (WhatsApp, Galerie, etc.) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    
     <application
         android:label="kalan_app"
         android:name="${applicationName}"

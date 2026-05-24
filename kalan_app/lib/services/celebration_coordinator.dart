@@ -1,34 +1,55 @@
 import 'package:flutter/material.dart';
-import 'celebration_gate.dart';
 
-/// File d'attente des popups de célébration (niveau, badge) pendant le quiz.
+/// Un singleton pour coordonner les affichages de popups (niveaux, badges)
+/// et éviter les superpositions désordonnées.
 class CelebrationCoordinator {
   static GlobalKey<NavigatorState>? navigatorKey;
-  static final List<VoidCallback> _pending = [];
+  static bool _isShowing = false;
+  static final List<VoidCallback> _queue = [];
 
+  /// Ajoute une action de célébration à la file d'attente ou l'exécute immédiatement.
   static void queueOrRun(VoidCallback action) {
-    if (CelebrationGate.isSuppressed) {
-      _pending.add(action);
-      return;
+    if (_isShowing) {
+      _queue.add(action);
+      debugPrint('[CelebrationCoordinator] Popup déjà en cours, ajout à la file.');
+    } else {
+      _runAction(action);
     }
-    _schedule(action);
   }
 
+  static Future<void> _runAction(VoidCallback action) async {
+    _isShowing = true;
+    
+    // Un petit délai pour s'assurer que le navigateur est prêt
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    debugPrint('[CelebrationCoordinator] Exécution de la popup.');
+    action();
+  }
+
+  /// Appelé par les popups quand elles sont fermées pour passer à la suivante.
+  static void dismiss() {
+    _isShowing = false;
+    debugPrint('[CelebrationCoordinator] Popup fermée.');
+    if (_queue.isNotEmpty) {
+      final nextAction = _queue.removeAt(0);
+      _runAction(nextAction);
+    }
+  }
+
+  /// Helper pour naviguer/fermer de manière sécurisée via la clé globale
+  static void pop() {
+    if (navigatorKey?.currentState?.canPop() ?? false) {
+      navigatorKey?.currentState?.pop();
+      dismiss();
+    }
+  }
+
+  /// Force l'affichage des popups en attente
   static void flushPending() {
-    if (_pending.isEmpty) return;
-    final pending = List<VoidCallback>.from(_pending);
-    _pending.clear();
-    for (var i = 0; i < pending.length; i++) {
-      Future.delayed(Duration(milliseconds: i * 550), () => _schedule(pending[i]));
+    if (!_isShowing && _queue.isNotEmpty) {
+      final nextAction = _queue.removeAt(0);
+      _runAction(nextAction);
     }
-  }
-
-  static void _schedule(VoidCallback action) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ctx = navigatorKey?.currentContext;
-      if (ctx != null && ctx.mounted) {
-        action();
-      }
-    });
   }
 }
