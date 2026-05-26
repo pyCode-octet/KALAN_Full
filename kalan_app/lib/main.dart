@@ -26,8 +26,6 @@ import 'package:kalan_app/presentation/blocs/leaderboard/leaderboard_bloc.dart';
 import 'package:kalan_app/presentation/blocs/notification/notification_bloc.dart';
 import 'package:kalan_app/data/repositories/leaderboard_repository_impl.dart';
 import 'package:kalan_app/services/sync_service.dart';
-import 'package:kalan_app/presentation/screens/home_screen.dart';
-import 'package:kalan_app/presentation/screens/welcome_carousel_screen.dart';
 import 'package:kalan_app/presentation/widgets/celebration_listener.dart';
 import 'package:kalan_app/services/connectivity_service.dart';
 import 'package:kalan_app/services/deep_link_service.dart';
@@ -153,13 +151,3 @@ class KalanApp extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return SupabaseService.currentUser == null
-        ? const WelcomeCarouselScreen()
-        : const HomeScreen();
-  }
-}

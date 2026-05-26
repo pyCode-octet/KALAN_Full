@@ -6,7 +6,6 @@ import '../blocs/leaderboard/leaderboard_state.dart';
 import '../../data/remote/supabase_service.dart';
 import '../../services/connectivity_service.dart';
 import 'roadmap_screen.dart';
-import 'versus_screen.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -91,7 +90,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
                       final topThree = state.entries.take(3).toList();
                       final remaining = state.entries.skip(3).take(7).toList();
-                      
+
                       final currentUserId = SupabaseService.currentUser?.id;
                       final userIndex = state.entries.indexWhere((e) => e.userId == currentUserId);
                       final hasMyEntry = userIndex != -1;
@@ -114,8 +113,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                               MarqueeTicker(text: tickerMessage),
                               const SizedBox(height: 15),
                               _buildCompactList(remaining),
-                              const SizedBox(height: 20),
-                              _buildVersusBlock(context),
                               const SizedBox(height: 100),
                             ],
                           ),
@@ -418,53 +415,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     );
   }
 
-  Widget _buildVersusBlock(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const VersusScreen()),
-      ),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 22),
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF3D2008), Color(0xFF5C3317)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: const Color(0xFF3D2008).withValues(alpha: 0.2), blurRadius: 15, offset: const Offset(0, 8))],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-              child: const Icon(Icons.people_outline_rounded, color: Color(0xFFFAC775), size: 28),
-            ),
-            const SizedBox(width: 15),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Mode Versus', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
-                  Text('Défie un ami et gagne des XP !', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500)),
-                ],
-              ),
-            ),
-            Container(
-              width: 34,
-              height: 34,
-              decoration: const BoxDecoration(color: Color(0xFFFAC775), shape: BoxShape.circle),
-              child: const Icon(Icons.chevron_right_rounded, color: Color(0xFFBA7517), size: 22),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class MarqueeTicker extends StatefulWidget {

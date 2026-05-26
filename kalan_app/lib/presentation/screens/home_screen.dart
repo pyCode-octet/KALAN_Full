@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/constants/app_colors.dart';
+import '../../services/presence_service.dart';
 import '../blocs/user/user_bloc.dart';
 import '../blocs/user/user_event.dart';
 import '../blocs/user/user_state.dart';
@@ -33,8 +34,13 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     context.read<UserBloc>().add(LoadUserProfile());
     context.read<BadgeBloc>().add(CheckNewBadges());
-    // Modèle local Gemma de 554 Mo : téléchargement automatique désactivé pour éviter les ralentissements/crashs.
-    // L'utilisateur pourra le télécharger explicitement via l'écran dédié dans les paramètres.
+    PresenceService.startHeartbeat();
+  }
+
+  @override
+  void dispose() {
+    PresenceService.stopHeartbeat();
+    super.dispose();
   }
 
   final List<Widget> _screens = [

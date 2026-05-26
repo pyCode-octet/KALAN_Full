@@ -232,9 +232,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       children: [
         Row(
           children: [
-            Expanded(child: _buildStatBlock('NIVEAU', levelInfo.level.toString(), const Color(0xFF4CAF50), Icons.trending_up_rounded)),
+            // Bloc Niveau : Uniquement l'icône, pas de texte "1"
+            Expanded(child: _buildStatBlock('NIVEAU', '', const Color(0xFF4CAF50), 'assets/icons/badges_niveau/level${levelInfo.level}.png', isLevel: true)),
             const SizedBox(width: 15),
-            Expanded(child: _buildStatBlock('XP TOTAL', points.toString(), const Color(0xFFE8C87A), Icons.auto_awesome_rounded)),
+            // Bloc XP : Texte en haut à droite
+            Expanded(child: _buildStatBlock('XP TOTAL', points.toString(), const Color(0xFFE8C87A), 'assets/icons/xp_icon.png')),
           ],
         ),
         const SizedBox(height: 20),
@@ -248,21 +250,55 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildStatBlock(String label, String value, Color color, IconData icon) {
+  Widget _buildStatBlock(String label, String value, Color color, String assetPath, {bool isLevel = false}) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      height: 110,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 12),
-          Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF1A1A1A))),
-          Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.grey.shade400, letterSpacing: 1)),
+          // Partie GAUCHE : L'icône qui remplit la zone (agrandie à 80)
+          Expanded(
+            flex: 3, // Plus d'espace pour l'icône
+            child: Center(
+              child: Image.asset(
+                assetPath, 
+                height: 80, 
+                width: 80, 
+                fit: BoxFit.contain, 
+                errorBuilder: (_, __, ___) => Icon(Icons.star_rounded, color: color, size: 50)
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          // Partie DROITE : Chiffre au centre et Label en bas
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (!isLevel)
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        value, 
+                        style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Color(0xFF1A1A1A))
+                      ),
+                    ),
+                  )
+                else
+                  const Spacer(),
+                Text(
+                  label, 
+                  style: TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: Colors.grey.shade400, letterSpacing: 0.5)
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -326,13 +362,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       padding: const EdgeInsets.all(20),
       physics: const BouncingScrollPhysics(),
       children: [
-        _buildProgressionCard(
-          'Série de révision', 
-          '${profile['streak'] ?? 0} jours', 
-          const Color(0xFFE24B4A), 
-          Icons.whatshot_rounded,
-          'Continue comme ça ! 🔥'
-        ),
+        _buildStreakCard(profile['streak'] ?? 0),
         const SizedBox(height: 15),
         Row(
           children: [
@@ -350,6 +380,85 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           'Précision moyenne sur tes quiz'
         ),
       ],
+    );
+  }
+
+  Widget _buildStreakCard(int streakDays) {
+    final List<String> weekDays = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+    final int today = DateTime.now().weekday - 1; // 0-6
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('SÉRIE DE RÉVISION', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.grey, letterSpacing: 1)),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text('$streakDays', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF1A1A1A))),
+                      const SizedBox(width: 8),
+                      const Text('JOURS', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF1A1A1A))),
+                    ],
+                  ),
+                ],
+              ),
+              const Icon(Icons.whatshot_rounded, color: Color(0xFFE24B4A), size: 48),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(7, (index) {
+              bool isCompleted = index <= today && streakDays > (today - index);
+              bool isToday = index == today;
+              
+              return Column(
+                children: [
+                  Text(weekDays[index], style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: isToday ? const Color(0xFFE24B4A) : Colors.grey.shade400)),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: isCompleted ? const Color(0xFFE24B4A) : Colors.grey.shade100,
+                      shape: BoxShape.circle,
+                      border: isToday ? Border.all(color: const Color(0xFFE24B4A), width: 2) : null,
+                    ),
+                    child: isCompleted 
+                        ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
+                        : (isToday ? const Icon(Icons.timer_outlined, color: Color(0xFFE24B4A), size: 18) : null),
+                  ),
+                ],
+              );
+            }),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF2F2),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Continue comme ça ! 🔥', style: TextStyle(color: Color(0xFFE24B4A), fontSize: 12, fontWeight: FontWeight.w800)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

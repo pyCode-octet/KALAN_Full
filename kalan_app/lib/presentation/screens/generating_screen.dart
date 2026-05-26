@@ -250,8 +250,11 @@ class _GeneratingScreenState extends State<GeneratingScreen> with TickerProvider
       }
     } catch (e) {
       if (mounted) {
+        final msg = e.toString().contains('IMAGE_FLOUE')
+            ? 'Image trop floue ou illisible. Reprends la photo.'
+            : 'Erreur lors de la génération : $e';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors de la génération : $e')),
+          SnackBar(content: Text(msg), backgroundColor: e.toString().contains('IMAGE_FLOUE') ? Colors.orange : null),
         );
         Navigator.pop(context);
       }

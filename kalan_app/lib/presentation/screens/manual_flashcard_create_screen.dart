@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../data/local/database_helper.dart';
+import '../../services/local_ai_service.dart';
 import 'package:uuid/uuid.dart';
 
 class ManualFlashcardCreateScreen extends StatefulWidget {
@@ -15,9 +16,11 @@ class _ManualFlashcardCreateScreenState extends State<ManualFlashcardCreateScree
   final TextEditingController _questionController = TextEditingController();
   final TextEditingController _answerController = TextEditingController();
   final TextEditingController _titleController = TextEditingController();
-  
+
   bool _isSaving = false;
+  bool _isGenerating = false;
   final Uuid _uuid = const Uuid();
+  final LocalAIService _ai = LocalAIService();
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +55,39 @@ class _ManualFlashcardCreateScreenState extends State<ManualFlashcardCreateScree
                 children: [
                   TextField(controller: _titleController, decoration: const InputDecoration(labelText: 'Titre du Deck')),
                   const SizedBox(height: 16),
-                  TextField(controller: _questionController, decoration: const InputDecoration(labelText: 'Question'), maxLines: 2),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _questionController,
+                          decoration: const InputDecoration(labelText: 'Question ou phrase'),
+                          maxLines: 2,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Tooltip(
+                        message: 'Générer la réponse via l\'IA',
+                        child: Material(
+                          color: const Color(0xFF2D6A2D),
+                          borderRadius: BorderRadius.circular(10),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(10),
+                            onTap: _isGenerating ? null : _generateWithAI,
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: _isGenerating
+                                  ? const SizedBox(
+                                      width: 20, height: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 16),
                   TextField(controller: _answerController, decoration: const InputDecoration(labelText: 'Réponse'), maxLines: 3),
                   const Spacer(),
@@ -67,6 +102,52 @@ class _ManualFlashcardCreateScreenState extends State<ManualFlashcardCreateScree
         ],
       ),
     );
+  }
+
+  Future<void> _generateWithAI() async {
+    final input = _questionController.text.trim();
+    if (input.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tape une question ou une phrase d\'abord.')),
+      );
+      return;
+    }
+
+    setState(() => _isGenerating = true);
+
+    try {
+      final notes = widget.extractedText.trim().isNotEmpty ? widget.extractedText : null;
+      final result = await _ai.generateSingleFlashcard(input: input, notes: notes)
+          .timeout(const Duration(seconds: 30));
+
+      if (!mounted) return;
+
+      final answer = result['answer'];
+      final warning = result['warning'];
+
+      if (warning != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('⚠️ $warning — vérifie la réponse manuellement.')),
+        );
+      }
+
+      if (answer != null) {
+        _questionController.text = result['question'] ?? input;
+        _answerController.text = answer.toString();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('L\'IA n\'a pas pu trouver de réponse. Essaie avec plus de notes.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erreur réseau — vérifie ta connexion.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGenerating = false);
+    }
   }
 
   Future<void> _saveFlashcard() async {

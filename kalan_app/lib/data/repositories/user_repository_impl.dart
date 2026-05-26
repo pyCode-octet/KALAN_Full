@@ -351,7 +351,7 @@ class UserRepositoryImpl implements UserRepository {
     try {
       final List<dynamic> response = await SupabaseService.client
           .from('users')
-          .select('uuid, pseudo, avatar_id, avatar_url')
+          .select('uuid, pseudo, avatar_id, avatar_url, last_active, points')
           .ilike('pseudo', '%$pseudo%')
           .limit(10);
       

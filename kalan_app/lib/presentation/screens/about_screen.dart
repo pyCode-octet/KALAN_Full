@@ -51,11 +51,11 @@ class AboutScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              child: SvgPicture.asset(
-                'assets/images/logo_kalan.svg', // Assure-toi que ce chemin correspond à ton logo SVG
+              child: Image.asset(
+                'assets/images/LOGO-removebg-preview.png',
                 width: 80,
                 height: 80,
-                placeholderBuilder: (context) => const Icon(
+                errorBuilder: (context, _, __) => const Icon(
                   Icons.menu_book_rounded,
                   size: 80,
                   color: _primaryColor,

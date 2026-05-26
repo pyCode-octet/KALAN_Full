@@ -14,6 +14,7 @@ import 'roadmap_screen.dart';
 import '../blocs/notification/notification_bloc.dart';
 import '../blocs/notification/notification_state.dart';
 import 'library_screen.dart';
+import 'battle_lobby_screen.dart';
 
 class HomeDashboard extends StatelessWidget {
   const HomeDashboard({super.key});
@@ -53,7 +54,7 @@ class HomeDashboard extends StatelessWidget {
                               Opacity(
                                 opacity: 0.0,
                                 child: IgnorePointer(
-                                  child: _buildFloatingBanner(context, profile['pseudo'] ?? 'Ami'),
+                                  child: _buildFloatingBanner(context, profile['pseudo'] ?? 'Ami', heroTag: 'mascot_hero_hidden'),
                                 ),
                               ),
                               _buildIntegratedLevelBlock(context, levelInfo, points),
@@ -63,9 +64,10 @@ class HomeDashboard extends StatelessWidget {
                         ],
                       ),
                       _buildDynamicSubjectsGrid(context, recentDecks),
+                      _buildArenaBlock(context),
                       if (userBadges.isNotEmpty) _buildBadgesSection(context, userBadges),
                       _buildRecentActivitySection(context, recentDecks),
-                      const SizedBox(height: 100), // Space for bottom nav
+                      const SizedBox(height: 100),
                     ],
                   ),
                 ),
@@ -141,7 +143,7 @@ class HomeDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildFloatingBanner(BuildContext context, String pseudo) {
+  Widget _buildFloatingBanner(BuildContext context, String pseudo, {String heroTag = 'mascot_hero'}) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
@@ -168,7 +170,7 @@ class HomeDashboard extends StatelessWidget {
       child: Row(
         children: [
           Hero(
-            tag: 'mascot_hero',
+            tag: heroTag,
             child: Image.asset(
               'assets/images/Bonome.png',
               height: 85, // Taille encore augmentée pour visibilité max
@@ -544,6 +546,51 @@ class HomeDashboard extends StatelessWidget {
     if (diff.inDays == 0) return 'Aujourd\'hui';
     if (diff.inDays == 1) return 'Hier';
     return DateFormat('dd/MM').format(date);
+  }
+
+  Widget _buildArenaBlock(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BattleLobbyScreen())),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF2D6A2D), Color(0xFF1B5E20)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [BoxShadow(color: const Color(0xFF2D6A2D).withValues(alpha: 0.25), blurRadius: 15, offset: const Offset(0, 8))],
+        ),
+        child: Row(
+          children: [
+            Image.asset(
+              'assets/images/epe.png',
+              height: 52,
+              errorBuilder: (_, __, ___) => const Text('⚔️', style: TextStyle(fontSize: 32)),
+            ),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('L\'ARÈNE KALAN', style: TextStyle(color: Color(0xFFFAC775), fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.2)),
+                  Text('Défie tes amis !', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
+                  Text('Mise des XP et gagne le duel ⚡', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                ],
+              ),
+            ),
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), shape: BoxShape.circle),
+              child: const Icon(Icons.chevron_right_rounded, color: Colors.white, size: 22),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
